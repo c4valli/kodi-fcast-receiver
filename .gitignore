@@ -1,2 +1,5 @@
 # Virtual environment
 venv/
+
+# Target addon
+dist.zip

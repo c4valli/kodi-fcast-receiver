@@ -3,3 +3,7 @@ venv/
 
 # Target addon
 dist.zip
+
+# Cache
+__pycache__/
+*.pyc

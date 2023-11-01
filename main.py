@@ -38,11 +38,13 @@ except:
     s.close()
     exit()
 
+# List of active sessions
 sessions: List[threading.Thread] = []
 
 log_and_notify(addonname, "Server listening on port %d" % FCAST_PORT, timeout=1000)
 log_and_notify(addonname, "Waiting %d seconds for a connection ..." % (FCAST_TIMEOUT / 1000), timeout=FCAST_TIMEOUT)
 
+# Connection handler thread function
 def connection_handler(conn, addr):
     global sessions
     log_and_notify(addonname, "Connection from %s" % addr[0])
@@ -53,8 +55,8 @@ def connection_handler(conn, addr):
     #session.on(Event.PLAY, handle_play)
     #session.on(Event.PLAY, handle_stop)
 
+    # Receive data from the client and process it
     while True:
-        
         buff = conn.recv(FCAST_BUFFER_SIZE)
         if not buff or len(buff) <= 0:
             break
@@ -62,16 +64,16 @@ def connection_handler(conn, addr):
         session.process_bytes(buff)
 
     session.close()
-
-    # Remove dead threads from sessions list
-    sessions = [t for t in sessions if t.is_alive()]
     log_and_notify("Connection closed from %s" % addr[0])
 
 while True:
     try:
         conn, addr = s.accept()
     except socket.timeout:
-        # If there are no active sessions, exit the loop
+        # Remove dead threads from sessions list on every timeout 
+        sessions = [t for t in sessions if t.is_alive()]
+
+        # If there are no active sessions left, exit the loop
         if len(sessions) < 0:
             break
     except:

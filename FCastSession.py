@@ -37,7 +37,6 @@ MAXIMUM_PACKET_LENGTH = 32000
 class FCastSession:
 
     buffer: bytes = bytes()
-    bytes_read: int = 0
     packet_length: int = 0
     client: socket.socket = None
     state: SessionState = SessionState.DISCONNECTED
@@ -89,12 +88,11 @@ class FCastSession:
         bytes_remaining = len(received_bytes) - bytes_to_read
 
         self.buffer += received_bytes[:bytes_to_read]
-        self.bytes_read += bytes_to_read
 
-        if self.bytes_read >= LENGTH_BYTES:
+        if len(self.buffer) >= LENGTH_BYTES:
             self.state = SessionState.WAITING_FOR_DATA
             self.packet_length = struct.unpack("<I", self.buffer[:4])[0]
-            self.bytes_read = 0
+            self.buffer = bytes()
 
             if self.packet_length > MAXIMUM_PACKET_LENGTH:
                 self.client.close()
@@ -109,16 +107,15 @@ class FCastSession:
         bytes_remaining = len(received_bytes) - bytes_to_read
 
         self.buffer += received_bytes[:bytes_to_read]
-        self.bytes_read += bytes_to_read
 
         # Packet fully received
-        if self.bytes_read >= self.packet_length:
+        if len(self.buffer) >= self.packet_length:
 
             self.__handle_packet()
 
             self.state = SessionState.WAITING_FOR_LENGTH
             self.packet_length = 0
-            self.bytes_read = 0
+            self.buffer = bytes()
 
             # If there are more bytes to read, treat them as a new packet
             if bytes_remaining > 0:
@@ -135,6 +132,7 @@ class FCastSession:
                 listener(body)
 
     def __handle_packet(self):
+
         opcode = OpCode(struct.unpack("<B", self.buffer[:1])[0])
         body = self.buffer[1:] if len(self.buffer) > 1 else None
 

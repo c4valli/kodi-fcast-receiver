@@ -23,6 +23,14 @@ class OpCode(Enum):
     VOLUME_UPDATE = 7
     SET_VOLUME = 8
 
+class Event(Enum):
+    PLAY = "play"
+    PAUSE = "pause"
+    RESUME = "resume"
+    STOP = "stop"
+    SEEK = "seek"
+    SET_VOLUME = "set_volume"
+
 LENGTH_BYTES = 4
 MAXIMUM_PACKET_LENGTH = 32000
 
@@ -131,16 +139,16 @@ class FCastSession:
         body = self.buffer[1:] if len(self.buffer) > 1 else None
 
         if opcode == OpCode.PLAY:
-            self.__emit("play", PlayMessage(**json.loads(body)))
+            self.__emit(Event.PLAY, PlayMessage(**json.loads(body)))
         elif opcode == OpCode.PAUSE:
-            self.__emit("pause")
+            self.__emit(Event.PAUSE)
         elif opcode == OpCode.RESUME:
-            self.__emit("resume")
+            self.__emit(Event.RESUME)
         elif opcode == OpCode.STOP:
-            self.__emit("stop")
+            self.__emit(Event.STOP)
         elif opcode == OpCode.SEEK:
-            self.__emit("seek", SeekMessage(**json.loads(body)))
+            self.__emit(Event.SEEK, SeekMessage(**json.loads(body)))
         elif opcode == OpCode.SET_VOLUME:
-            self.__emit("set_volume", SetVolumeMessage(**json.loads(body)))
+            self.__emit(Event.SET_VOLUME, SetVolumeMessage(**json.loads(body)))
         else:
             raise Exception("Unhandled opcode %s" % opcode)

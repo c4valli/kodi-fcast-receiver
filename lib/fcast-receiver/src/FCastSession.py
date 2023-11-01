@@ -1,6 +1,6 @@
 from enum import Enum
 import json
-import socket as pysocket
+import socket
 import struct
 from typing import Callable, Dict
 
@@ -31,13 +31,13 @@ class FCastSession:
     buffer: bytes = bytes()
     bytes_read: int = 0
     packet_length: int = 0
-    socket: pysocket.socket = None
+    client: socket.socket = None
     state: SessionState = SessionState.DISCONNECTED
 
     __listeners: Dict[str, Callable[[any], any]] = {}
 
-    def __init__(self, socket: pysocket.socket):
-        self.socket = socket
+    def __init__(self, client: socket.socket):
+        self.client = client
         self.state = SessionState.WAITING_FOR_LENGTH
 
     def send_playback_update(self, value: PlayBackUpdateMessage):
@@ -58,7 +58,7 @@ class FCastSession:
             packet += json_message.encode("utf-8")
 
         # Send the packet
-        self.socket.send(packet)
+        self.client.send(packet)
 
     def process_bytes(self, received_bytes: bytes):
         if not received_bytes or len(received_bytes) <= 0:
@@ -84,7 +84,7 @@ class FCastSession:
             self.bytes_read = 0
 
             if self.packet_length > MAXIMUM_PACKET_LENGTH:
-                self.socket.close()
+                self.client.close()
                 self.state = SessionState.DISCONNECTED
                 raise Exception("Packet length %d exceeds maximum packet length %d" % (self.packet_length, MAXIMUM_PACKET_LENGTH))
             

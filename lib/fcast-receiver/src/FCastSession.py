@@ -40,6 +40,11 @@ class FCastSession:
         self.client = client
         self.state = SessionState.WAITING_FOR_LENGTH
 
+    def close(self):
+        self.client.close()
+        self.client = None
+        self.state = SessionState.DISCONNECTED
+
     def send_playback_update(self, value: PlayBackUpdateMessage):
         self.__send(OpCode.PLAYBACK_UPDATE, value)
 

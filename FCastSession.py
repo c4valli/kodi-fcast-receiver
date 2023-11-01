@@ -124,7 +124,7 @@ class FCastSession:
             if bytes_remaining > 0:
                 self.__handle_length_bytes(received_bytes[bytes_to_read:])
 
-    def on(self, event: str, callback: Callable[[any], any]):
+    def on(self, event: Event, callback: Callable[[any], any]):
         if event not in self.__listeners:
             self.__listeners[event] = []
         self.__listeners[event].append(callback)

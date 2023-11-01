@@ -6,7 +6,7 @@ class PlayBackState(Enum):
     PAUSED = 2
 
 class PlayMessage:
-    def __init__(self, container: str, url: str, content: str, time: int) -> None:
+    def __init__(self, container: str, time: int, url: str = None, content: str = None) -> None:
         self.container = container
         self.url = url
         self.content = content

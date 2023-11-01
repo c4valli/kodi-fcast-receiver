@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import IntEnum, StrEnum
 import json
 import socket
 import struct
@@ -6,13 +6,13 @@ from typing import Callable, Dict
 
 from FCastPackets import *
 
-class SessionState(Enum):
+class SessionState(IntEnum):
     IDLE = 0
     WAITING_FOR_LENGTH = 1
     WAITING_FOR_DATA = 2
     DISCONNECTED = 3
 
-class OpCode(Enum):
+class OpCode(IntEnum):
     NONE = 0
     PLAY = 1
     PAUSE = 2
@@ -23,7 +23,7 @@ class OpCode(Enum):
     VOLUME_UPDATE = 7
     SET_VOLUME = 8
 
-class Event(Enum):
+class Event(StrEnum):
     PLAY = "play"
     PAUSE = "pause"
     RESUME = "resume"
@@ -41,7 +41,7 @@ class FCastSession:
     client: socket.socket = None
     state: SessionState = SessionState.DISCONNECTED
 
-    __listeners: Dict[str, Callable[[any], any]] = {}
+    __listeners: Dict[str, Callable[[any, any], any]] = {}
 
     def __init__(self, client: socket.socket):
         self.client = client
@@ -129,7 +129,7 @@ class FCastSession:
     def __emit(self, event: str, body = None):
         if event in self.__listeners:
             for listener in self.__listeners[event]:
-                listener(body)
+                listener(self, body)
 
     def __handle_packet(self):
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import IntEnum
 
-class PlayBackState(Enum):
+class PlayBackState(IntEnum):
     IDLE = 0
     PLAYING = 1
     PAUSED = 2

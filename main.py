@@ -1,7 +1,12 @@
+import socket
+import threading
+from typing import List
 import xbmcaddon
 import xbmcgui
 import xbmc
-import socket
+
+from FCastPackets import *
+from FCastSession import Event, FCastSession
 
 # Helper function to both print a message to the Kodi logs and create a notification
 def log_and_notify(tag, msg, icon=xbmcgui.NOTIFICATION_INFO, timeout=3000, loglevel=xbmc.LOGDEBUG):
@@ -27,39 +32,57 @@ s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
     s.bind((FCAST_HOST, FCAST_PORT))
-    s.listen(1)
+    s.listen()
 except:
     log_and_notify(addonname, "Bind failed", xbmcgui.NOTIFICATION_ERROR)
     s.close()
     exit()
 
+sessions: List[threading.Thread] = []
+
 log_and_notify(addonname, "Server listening on port %d" % FCAST_PORT, timeout=1000)
 log_and_notify(addonname, "Waiting %d seconds for a connection ..." % (FCAST_TIMEOUT / 1000), timeout=FCAST_TIMEOUT)
 
-try:
-    conn, addr = s.accept()
-except socket.timeout:
-    log_and_notify(addonname, "No connection before timeout")
-    pass
-except:
-    raise
-else:
-    client_addr = addr[0]
-    log_and_notify(addonname, "Connection from %s" % client_addr)
+def connection_handler(conn, addr):
+    global sessions
+    log_and_notify(addonname, "Connection from %s" % addr[0])
 
-    # Receive data from the client
-    data = bytes()
+    session = FCastSession(conn)
+
+    # TODO: Add event handlers
+    #session.on(Event.PLAY, handle_play)
+    #session.on(Event.PLAY, handle_stop)
+
     while True:
+        
         buff = conn.recv(FCAST_BUFFER_SIZE)
-        if not buff or len(buff) == 0:
+        if not buff or len(buff) <= 0:
             break
-        data += buff
 
-    if data:
-        xbmc.log(data.hex())
+        session.process_bytes(buff)
+
+    session.close()
+
+    # Remove dead threads from sessions list
+    sessions = [t for t in sessions if t.is_alive()]
+    log_and_notify("Connection closed from %s" % addr[0])
+
+while True:
+    try:
+        conn, addr = s.accept()
+    except socket.timeout:
+        # If there are no active sessions, exit the loop
+        if len(sessions) < 0:
+            break
+    except:
+        raise
     else:
-        log_and_notify(addonname, "No data received")
+        # Create a new thread for the connection
+        t = threading.Thread(target=connection_handler, args=(conn, addr))
+        sessions.append(t)
+        t.start()
 
-s.close()
+    s.close()
 
-xbmc.log("Server stopped.")
+    log_and_notify(addonname, "Server stopped")
+    xbmc.log("Server stopped.")

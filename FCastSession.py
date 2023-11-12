@@ -61,7 +61,8 @@ class FCastSession:
     def __send(self, opcode: OpCode, message = None):
         # FCast packet header
         json_message = json.dumps(message.__dict__) if message else None
-        header = struct.pack("<IB", len(json_message) if json_message else 0, opcode.value)
+        body_size = (len(json_message) if json_message else 0) + 1
+        header = struct.pack("<IB", body_size, opcode.value)
 
         packet = header
 

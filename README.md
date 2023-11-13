@@ -11,3 +11,17 @@ Official web site: [fcast.org](https://fcast.org)
 ## Receiver
 
 This add-on is an unofficial FCast receiver for Kodi. It allows you to stream content from any FCast client to Kodi media center.
+
+## Development
+1. Create virtual environment
+```bash
+python -m venv venv
+```
+2. Activate virtual environment
+```bash
+source ./venv/bin/activate
+```
+3. Install required modules
+```bash
+pip install -U mpv kodistubs
+```

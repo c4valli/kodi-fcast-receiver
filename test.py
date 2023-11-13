@@ -23,17 +23,16 @@ def handle_play(session: FCastSession, message: PlayMessage):
     
     print("Got play message for container: %s" % message.container)
 
+    if player:
+        player.stop()
+
+    play_url = ''
+
     if message.url:
         print("Got play message with URL: %s" % message.url)
 
         player = mpv.MPV()
-        @player.property_observer('time-pos')
-        def time_observer(_name, value):
-            print(f"[MPV] Time: {value}")
-            session.send_playback_update(PlayBackUpdateMessage(int(value), PlayBackState.PLAYING))
-        player.play(message.url)
-        player.wait_for_playback()
-
+        play_url = message.url
 
     elif message.content:
 
@@ -58,11 +57,15 @@ def handle_play(session: FCastSession, message: PlayMessage):
         print("Started HTTP server ...")
 
         player = mpv.MPV()
-        player.play("http://localhost:%d/" % http_port)
-        player.on_key_press('q', lambda: player.terminate())
+        play_url = "http://localhost:%d/" % http_port
 
+    else:
+        print("Play message has no URL or content, ignoring it ...")
+    
+    if player:
         global last_time_update
         last_time_update = None
+        player.on_key_press('q', lambda: player.terminate())
         @player.property_observer('time-pos')
         def time_observer(_name, value):
             global last_time_update
@@ -92,9 +95,8 @@ def handle_play(session: FCastSession, message: PlayMessage):
             http_server.shutdown()
             http_server_thread.join()
             print("HTTP server finished")
-
-    else:
-        print("Play message has no URL or content, ignoring it ...")
+        # Start MPV
+        player.play(play_url)
 
 def handle_pause(session: FCastSession, message: None):
     global player
@@ -109,6 +111,7 @@ def handle_stop(session: FCastSession, message: None):
 
     print("Got stop message")
     STOP_RECEIVED = True
+    player.stop()
 
 def handle_seek(session: FCastSession, message: SeekMessage):
     global player

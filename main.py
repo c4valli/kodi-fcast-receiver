@@ -99,7 +99,7 @@ class FCastPlayer(xbmc.Player):
     # Not overriden
     def onPlayBackTimeChanged(self) -> None:
         time_int = int(self.getTime())
-        player.prev_time = int(player.getTime())
+        self.prev_time = int(self.getTime())
         self.session.send_playback_update(PlayBackUpdateMessage(
             time_int,
             PlayBackState.PAUSED if self.is_paused else PlayBackState.PLAYING,

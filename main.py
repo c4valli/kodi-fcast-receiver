@@ -22,6 +22,16 @@ FCAST_BUFFER_SIZE = 32000
 addon       = xbmcaddon.Addon()
 addonname   = addon.getAddonInfo('name')
 
+# Trottle repeated attempts at a function call
+def debounce(func, wait):
+    def debounced(*args, **kwargs):
+        debounced.timer.cancel()
+        debounced.timer = threading.Timer(wait, func, args=args, kwargs=kwargs)
+        debounced.timer.start()
+
+    debounced.timer = threading.Timer(0, lambda: None)  # Initial dummy timer
+    return debounced
+
 class FCastPlayer(xbmc.Player):
     # TODO: Since there is no callback when the time changes, a peridoc timed function needs to be called for
     #  every 1 second (or whatever the current playback speed is set to)
@@ -66,9 +76,6 @@ class FCastPlayer(xbmc.Player):
     def onPlayBackResumed(self) -> None:
         self.is_paused = False
     
-    def onPlayBackSeek(self, time: int, seekOffset: int) -> None:
-        pass
-    
     def onPlayBackEnded(self) -> None:
         self.session.send_playback_update(PlayBackUpdateMessage(
             0,
@@ -80,9 +87,6 @@ class FCastPlayer(xbmc.Player):
             0,
             PlayBackState.IDLE,
         ))
-    
-    def onPlayBackSeekChapter(self, chapter: int) -> None:
-        pass
     
     def onPlayBackSpeedChanged(self, speed: int) -> None:
         self.playback_speed = speed
@@ -171,7 +175,7 @@ def connection_handler(conn, addr):
     session.on(Event.STOP, handle_stop)
     session.on(Event.PAUSE, handle_pause)
     session.on(Event.RESUME, handle_resume)
-    session.on(Event.SEEK, handle_seek)
+    session.on(Event.SEEK, debounce(handle_seek, 0.1))
     # TODO: Find out how to get/set volume
     # session.on(Event.SET_VOLUME, handle_volume)
 

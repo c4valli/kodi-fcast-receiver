@@ -52,49 +52,40 @@ class FCastPlayer(xbmc.Player):
             0,
             PlayBackState.PLAYING,
         ))
-        return super().onAVStarted()
 
     def onPlayBackStopped(self) -> None:
         self.session.send_playback_update(PlayBackUpdateMessage(
             0,
             PlayBackState.IDLE,
         ))
-        return super().onPlayBackStopped()
 
     def onPlayBackPaused(self) -> None:
         self.is_paused = True
         self.onPlayBackTimeChanged()
-        return super().onPlayBackPaused()
 
     def onPlayBackResumed(self) -> None:
         self.is_paused = False
-        return super().onPlayBackResumed()
     
     def onPlayBackSeek(self, time: int, seekOffset: int) -> None:
-        ret = super().onPlayBackSeek(time, seekOffset)
-        return ret
+        pass
     
     def onPlayBackEnded(self) -> None:
         self.session.send_playback_update(PlayBackUpdateMessage(
             0,
             PlayBackState.IDLE,
         ))
-        return super().onPlayBackEnded()
     
     def onPlayBackError(self) -> None:
         self.session.send_playback_update(PlayBackUpdateMessage(
             0,
             PlayBackState.IDLE,
         ))
-        return super().onPlayBackError()
     
     def onPlayBackSeekChapter(self, chapter: int) -> None:
-        ret = super().onPlayBackSeekChapter(chapter)
-        return ret
+        pass
     
     def onPlayBackSpeedChanged(self, speed: int) -> None:
         self.playback_speed = speed
-        return super().onPlayBackSpeedChanged(speed)
     
     # Not overriden
     def onPlayBackTimeChanged(self) -> None:

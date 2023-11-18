@@ -1,4 +1,4 @@
-from enum import IntEnum, StrEnum
+from enum import Enum
 import json
 import socket
 import struct
@@ -6,13 +6,13 @@ from typing import Callable, Dict
 
 from FCastPackets import *
 
-class SessionState(IntEnum):
+class SessionState(int, Enum):
     IDLE = 0
     WAITING_FOR_LENGTH = 1
     WAITING_FOR_DATA = 2
     DISCONNECTED = 3
 
-class OpCode(IntEnum):
+class OpCode(int, Enum):
     NONE = 0
     PLAY = 1
     PAUSE = 2
@@ -23,7 +23,7 @@ class OpCode(IntEnum):
     VOLUME_UPDATE = 7
     SET_VOLUME = 8
 
-class Event(StrEnum):
+class Event(str, Enum):
     PLAY = "play"
     PAUSE = "pause"
     RESUME = "resume"

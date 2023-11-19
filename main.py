@@ -201,7 +201,7 @@ def connection_handler(conn, addr):
 def main():
     global sessions
 
-    xbmc.log("Starting server ...")
+    log_and_notify(addonname, "Starting FCast receiver ...")
     # List of active sessions
 
     # Create a socket for the FCast receiver
@@ -223,7 +223,6 @@ def main():
     selector.register(s, selectors.EVENT_READ, data=None)
 
     log_and_notify(addonname, "Server listening on port %d" % FCAST_PORT, timeout=1000)
-    log_and_notify(addonname, "Waiting %d seconds for a connection ..." % (FCAST_TIMEOUT / 1000), timeout=FCAST_TIMEOUT)
 
     monitor = xbmc.Monitor()
     # Loop for new connections
@@ -249,7 +248,6 @@ def main():
     s.close()
 
     log_and_notify(addonname, "Server stopped")
-    xbmc.log("Server stopped.")
     exit()
 
 

@@ -196,7 +196,7 @@ def connection_handler(conn, addr):
             break
 
     session.close()
-    log_and_notify("Connection closed from %s" % addr[0])
+    log_and_notify(addonname, "Connection closed from %s" % addr[0])
 
 def main():
     global sessions

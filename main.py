@@ -199,7 +199,7 @@ def handle_seek(session: FCastSession, message: SeekMessage):
     debounce(do_seek, 0.15)()
 
 def handle_stop(session: FCastPlayer, message = None):
-    global player, http_server, http_shutdown_thread
+    global player
     log_and_notify(addonname, f"Client request stop", notify=False)
     player.stop()
 
@@ -231,7 +231,6 @@ def handle_volume(session: FCastSession, message: SetVolumeMessage):
 def connection_handler(conn, addr):
     global sessions
     global player
-
 
     monitor = xbmc.Monitor()
     log_and_notify(addonname, "Connection from %s" % addr[0])

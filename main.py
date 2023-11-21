@@ -190,11 +190,19 @@ def handle_stop(session: FCastPlayer, message = None):
 def handle_pause(session: FCastPlayer, message = None):
     global player
     log_and_notify(addonname, f"Client request pause", notify=False)
+    session.send_playback_update(PlayBackUpdateMessage(
+        int(player.getTime()),
+        PlayBackState.PAUSED,
+    ))
     player.doPause()
 
 def handle_resume(session: FCastPlayer, message = None):
     global player
     log_and_notify(addonname, f"Client request resume", notify=False)
+    session.send_playback_update(PlayBackUpdateMessage(
+        int(player.getTime()),
+        PlayBackState.PLAYING,
+    ))
     player.doResume()
 
 def handle_volume(session: FCastSession, message: SetVolumeMessage):

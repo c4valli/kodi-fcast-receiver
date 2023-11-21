@@ -2,6 +2,7 @@
 <addon id="c4valli.fcast.receiver" name="Kodi FCast Receiver" version="1.0.0" provider-name="sguerrini97">
 	<requires>
 		<import addon="xbmc.python" version="3.0.0"/>
+		<import addon="inputstream.adaptive" version="20.3.1"/>
 	</requires>
 	<extension point="xbmc.service" library="main.py" />
 	<extension point="xbmc.addon.metadata">

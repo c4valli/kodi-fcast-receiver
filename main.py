@@ -3,12 +3,10 @@ import socket
 import threading
 from typing import List
 import xbmcaddon
-import xbmcplugin
 import xbmcgui
 import xbmc
-import asyncio
 import selectors
-
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from FCastSession import Event, FCastSession, PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage, SetVolumeMessage, VolumeUpdateMessage
 
 sessions: List[threading.Thread] = []
@@ -21,6 +19,8 @@ FCAST_BUFFER_SIZE = 32000
 # Retrieve Kodi addon information
 addon       = xbmcaddon.Addon()
 addonname   = addon.getAddonInfo('name')
+
+plugin_handle = int(sys.argv[1]) if len(sys.argv) > 1 else None
 
 # Trottle repeated attempts at a function call
 def debounce(func, wait):
@@ -64,10 +64,7 @@ class FCastPlayer(xbmc.Player):
         ))
 
     def onPlayBackStopped(self) -> None:
-        self.session.send_playback_update(PlayBackUpdateMessage(
-            0,
-            PlayBackState.IDLE,
-        ))
+        self.onPlayBackEnded()
 
     def onPlayBackPaused(self) -> None:
         self.is_paused = True
@@ -81,12 +78,13 @@ class FCastPlayer(xbmc.Player):
             0,
             PlayBackState.IDLE,
         ))
+        global http_server, http_shutdown_thread
+        if http_server:
+            http_shutdown_thread = threading.Thread(target=shutdown_http_server)
+            http_shutdown_thread.start()
     
     def onPlayBackError(self) -> None:
-        self.session.send_playback_update(PlayBackUpdateMessage(
-            0,
-            PlayBackState.IDLE,
-        ))
+        self.onPlayBackEnded()
     
     def onPlayBackSpeedChanged(self, speed: int) -> None:
         self.playback_speed = speed
@@ -99,9 +97,23 @@ class FCastPlayer(xbmc.Player):
             time_int,
             PlayBackState.PAUSED if self.is_paused else PlayBackState.PLAYING,
         ))
-
+    
 # Player needs to be a global so it stays in scope and doesn't get GC'd
 player: FCastPlayer = None
+
+http_server: HTTPServer = None
+http_server_thread: threading.Thread = None
+http_shutdown_thread: threading.Thread = None
+
+def run_http_server():
+    global http_server
+    http_server.serve_forever()
+
+def shutdown_http_server():
+    global http_server
+    if http_server:
+        http_server.shutdown()
+        http_server.socket.close()
 
 def check_player():
     global player
@@ -121,24 +133,50 @@ def log_and_notify(tag, msg, icon=xbmcgui.NOTIFICATION_INFO, timeout=3000, logle
 def handle_play(session: FCastSession, message: PlayMessage):
     play_item: xbmcgui.ListItem = None
     url: str = ''
+    play_item = xbmcgui.ListItem()
     if message.url:
-        play_item = xbmcgui.ListItem(path=message.url)
         url = message.url
     elif message.content:
-        pass
+        if message.container in ['application/dash+xml', 'application/xml+dash']:
+            # Basing this off what the YouTube addon does to enable dash
+            play_item = xbmcgui.ListItem()
+            play_item.setContentLookup(False)
+            play_item.setMimeType('application/xml+dash')
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
+
+            # Set up HTTP server
+            class http_request_handler(BaseHTTPRequestHandler):
+                def do_GET(self):
+                    self.send_response(200)
+                    self.send_header('Content-type', message.container)
+                    self.end_headers()
+                    self.wfile.write(message.content.encode())
+            global http_server, http_server_thread
+            # Picks a random available port
+            http_server = HTTPServer(('', 0), http_request_handler)
+            http_port = int(http_server.socket.getsockname()[1])
+            http_server_thread = threading.Thread(target=run_http_server)
+            http_server_thread.start()
+            url = f'http://localhost:{http_port}/stream.mpd'
 
     if play_item:
+        play_item.setPath(url)
         player.play(item=url, listitem=play_item)
 
-# TODO: We need some logic here to 'debounce' the messages. Kodi does not handle high-frequency seek well
 def handle_seek(session: FCastSession, message: SeekMessage):
     global player
     log_and_notify(addonname, f"Client request seek to {message.time}", notify=False)
     # Send FCastMessage so the client's seek bar position updates better
-    player.seekTime(float(message.time))
+    session.send_playback_update(PlayBackUpdateMessage(
+        message.time,
+        PlayBackState.PAUSED if player.is_paused else PlayBackState.PLAYING,
+    ))
+    # Ensure that player.seekTime is called with a low frequency. This prevents Kodi from freezing
+    debounce(player.seekTime, 0.15)(float(message.time))
 
 def handle_stop(session: FCastPlayer, message = None):
-    global player
+    global player, http_server, http_shutdown_thread
     log_and_notify(addonname, f"Client request stop", notify=False)
     player.stop()
 
@@ -175,7 +213,7 @@ def connection_handler(conn, addr):
     session.on(Event.STOP, handle_stop)
     session.on(Event.PAUSE, handle_pause)
     session.on(Event.RESUME, handle_resume)
-    session.on(Event.SEEK, debounce(handle_seek, 0.1))
+    session.on(Event.SEEK, handle_seek)
     # TODO: Find out how to get/set volume
     # session.on(Event.SET_VOLUME, handle_volume)
 
@@ -246,6 +284,10 @@ def main():
             break
 
     s.close()
+    global http_server
+    if http_server:
+        shutdown_thread = threading.Thread(target=shutdown_http_server)
+        shutdown_thread.start()
 
     log_and_notify(addonname, "Server stopped")
     exit()

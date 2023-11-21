@@ -101,6 +101,9 @@ class FCastPlayer(xbmc.Player):
 # Player needs to be a global so it stays in scope and doesn't get GC'd
 player: FCastPlayer = None
 
+# Used to queue up seeks
+seeks: list[float] = []
+
 http_server: HTTPServer = None
 http_server_thread: threading.Thread = None
 http_shutdown_thread: threading.Thread = None
@@ -171,16 +174,29 @@ def handle_play(session: FCastSession, message: PlayMessage):
         play_item.setPath(url)
         player.play(item=url, listitem=play_item)
 
+def do_seek():
+    global player, seeks
+
+    # we are only interested in the last consecutive seek, so we skip the first one if there are more than one
+    if len(seeks) > 1:
+        seeks.pop(0)
+    elif len(seeks) > 0:
+        # Last seek in the queue, seek to it
+        player.seekTime(seeks.pop(0))
+
 def handle_seek(session: FCastSession, message: SeekMessage):
-    global player
+    global player, seeks
     log_and_notify(addonname, f"Client request seek to {message.time}", notify=False)
     # Send FCastMessage so the client's seek bar position updates better
     session.send_playback_update(PlayBackUpdateMessage(
         message.time,
         PlayBackState.PAUSED if player.is_paused else PlayBackState.PLAYING,
     ))
+
+    # Append this seek to the seeks "queue"
+    seeks.append(float(message.time))
     # Ensure that player.seekTime is called with a low frequency. This prevents Kodi from freezing
-    debounce(player.seekTime, 0.15)(float(message.time))
+    debounce(do_seek, 0.15)()
 
 def handle_stop(session: FCastPlayer, message = None):
     global player, http_server, http_shutdown_thread

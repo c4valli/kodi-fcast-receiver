@@ -147,11 +147,18 @@ def handle_play(session: FCastSession, message: PlayMessage):
 
             # Set up HTTP server
             class http_request_handler(BaseHTTPRequestHandler):
+
+                def do_HEAD(self):
+                    self.send_response(200)
+                    self.send_header('Content-Type', message.container)
+                    self.end_headers()
+
                 def do_GET(self):
                     self.send_response(200)
-                    self.send_header('Content-type', message.container)
+                    self.send_header('Content-Type', message.container)
                     self.end_headers()
                     self.wfile.write(message.content.encode())
+
             global http_server, http_server_thread
             # Picks a random available port
             http_server = HTTPServer(('', 0), http_request_handler)

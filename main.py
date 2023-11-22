@@ -6,9 +6,9 @@ import xbmcaddon
 import xbmcgui
 import xbmc
 import selectors
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from base64 import b64encode
 from FCastSession import Event, FCastSession, PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage, SetVolumeMessage, VolumeUpdateMessage
 
 session_threads: List[Thread] = []
@@ -80,10 +80,6 @@ class FCastPlayer(xbmc.Player):
                 0,
                 PlayBackState.IDLE,
             ))
-        global http_server, http_shutdown_thread
-        if http_server:
-            http_shutdown_thread = Thread(target=shutdown_http_server)
-            http_shutdown_thread.start()
     
     def onPlayBackError(self) -> None:
         self.onPlayBackEnded()
@@ -113,20 +109,6 @@ player: FCastPlayer = None
 
 # Used to queue up seeks
 seeks: list[float] = []
-
-http_server: HTTPServer = None
-http_server_thread: Thread = None
-http_shutdown_thread: Thread = None
-
-def run_http_server():
-    global http_server
-    http_server.serve_forever()
-
-def shutdown_http_server():
-    global http_server
-    if http_server:
-        http_server.shutdown()
-        http_server.socket.close()
 
 def check_player():
     global player
@@ -172,28 +154,9 @@ def handle_play(session: FCastSession, message: PlayMessage):
             play_item.setMimeType('application/xml+dash')
             play_item.setProperty('inputstream', 'inputstream.adaptive')
             play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
-
-            # Set up HTTP server
-            class http_request_handler(BaseHTTPRequestHandler):
-
-                def do_HEAD(self):
-                    self.send_response(200)
-                    self.send_header('Content-Type', message.container)
-                    self.end_headers()
-
-                def do_GET(self):
-                    self.send_response(200)
-                    self.send_header('Content-Type', message.container)
-                    self.end_headers()
-                    self.wfile.write(message.content.encode())
-
-            global http_server, http_server_thread
-            # Picks a random available port
-            http_server = HTTPServer(('', 0), http_request_handler)
-            http_port = int(http_server.socket.getsockname()[1])
-            http_server_thread = Thread(target=run_http_server)
-            http_server_thread.start()
-            url = f'http://localhost:{http_port}/stream.mpd'
+            # Use data URLs to avoid having to host the manifest with HTTP
+            base64_content = b64encode(message.content.encode('utf-8')).decode('ascii')
+            url = f'data:application/xml+dash;base64,{base64_content}'
 
     if play_item:
         play_item.setPath(url)
@@ -338,14 +301,9 @@ def main():
             break
 
     s.close()
-    global http_server
-    if http_server:
-        shutdown_thread = Thread(target=shutdown_http_server)
-        shutdown_thread.start()
 
     log_and_notify(addonname, "Server stopped")
     exit()
-
 
 if __name__ == '__main__':
     main()

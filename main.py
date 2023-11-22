@@ -11,7 +11,8 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from FCastSession import Event, FCastSession, PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage, SetVolumeMessage, VolumeUpdateMessage
 
-sessions: List[Thread] = []
+session_threads: List[Thread] = []
+sessions: List[FCastSession] = []
 # Constants
 FCAST_HOST = ''
 FCAST_PORT = 46899
@@ -38,31 +39,30 @@ def debounce(func, wait):
 
 class FCastPlayer(xbmc.Player):
     playback_speed: float = 1.0
-    session: FCastSession
+    sessions: List[FCastSession]
     is_paused: bool = False
     # Used to perform time updates
     prev_time: int = -1
 
-    def __init__(self, session: FCastSession):
-        self.session = session
+    def __init__(self, sessions: FCastSession):
+        self.sessions = sessions
         super().__init__(self)
     
     def doPause(self) -> None:
         if not self.is_paused:
+            self.is_paused = True
             self.pause()
     
     def doResume(self) -> None:
         if self.is_paused:
+            self.is_paused = False
             self.pause()
 
     def onAVStarted(self) -> None:
         log_and_notify(addonname, "Playback started")
         self.is_paused = False
         # Start time loop once the player is active
-        self.session.send_playback_update(PlayBackUpdateMessage(
-            0,
-            PlayBackState.PLAYING,
-        ))
+        self.onPlayBackTimeChanged()
 
     def onPlayBackStopped(self) -> None:
         self.onPlayBackEnded()
@@ -75,10 +75,11 @@ class FCastPlayer(xbmc.Player):
         self.is_paused = False
     
     def onPlayBackEnded(self) -> None:
-        self.session.send_playback_update(PlayBackUpdateMessage(
-            0,
-            PlayBackState.IDLE,
-        ))
+        for session in self.sessions:
+            session.send_playback_update(PlayBackUpdateMessage(
+                0,
+                PlayBackState.IDLE,
+            ))
         global http_server, http_shutdown_thread
         if http_server:
             http_shutdown_thread = Thread(target=shutdown_http_server)
@@ -94,10 +95,18 @@ class FCastPlayer(xbmc.Player):
     def onPlayBackTimeChanged(self) -> None:
         time_int = int(self.getTime())
         self.prev_time = int(self.getTime())
-        self.session.send_playback_update(PlayBackUpdateMessage(
+        pb_message = PlayBackUpdateMessage(
             time_int,
             PlayBackState.PAUSED if self.is_paused else PlayBackState.PLAYING,
-        ))
+        )
+        for session in self.sessions:
+            session.send_playback_update(pb_message)
+    
+    def addSession(self, session: FCastSession):
+        self.sessions.append(session)
+    
+    def removeSession(self, session: FCastSession):
+        self.sessions.remove(session)
     
 # Player needs to be a global so it stays in scope and doesn't get GC'd
 player: FCastPlayer = None
@@ -124,7 +133,7 @@ def check_player():
     log_and_notify(addonname, "Starting player thread", notify=False)
     monitor = xbmc.Monitor()
     while not monitor.abortRequested():
-        if player is not None and player.isPlaying():
+        if player.isPlaying():
             # Update the current time if it has changed
             if int(player.getTime()) != player.prev_time:
                 player.onPlayBackTimeChanged()        
@@ -238,17 +247,14 @@ def handle_volume(session: FCastSession, message: SetVolumeMessage):
     xbmc.executebuiltin(f'SetVolume({volume_level})')
 
 # Connection handler thread function
-def connection_handler(conn, addr):
-    global sessions
+def connection_handler(conn: socket.socket, addr):
     global player
 
     monitor = xbmc.Monitor()
     log_and_notify(addonname, "Connection from %s" % addr[0])
 
     session = FCastSession(conn)
-    player = FCastPlayer(session)
 
-    # TODO: Add event handlers
     session.on(Event.PLAY, handle_play)
     session.on(Event.STOP, handle_stop)
     session.on(Event.PAUSE, handle_pause)
@@ -256,6 +262,9 @@ def connection_handler(conn, addr):
     session.on(Event.SEEK, handle_seek)
     # TODO: Find out how to get/set volume
     # session.on(Event.SET_VOLUME, handle_volume)
+
+    # Allow Kodi to send playback update packets to this client
+    player.addSession(session)
 
     # Receive data from the client and process it
     while not monitor.abortRequested():
@@ -265,16 +274,20 @@ def connection_handler(conn, addr):
                 break
             session.process_bytes(buff)
         except BlockingIOError:
+            # Normal behavior. Prevents blocking
             pass
+        except Exception:
+            break
 
         if monitor.waitForAbort(0.05):
             break
 
+    player.removeSession(session)
     session.close()
     log_and_notify(addonname, "Connection closed from %s" % addr[0])
 
 def main():
-    global sessions, player_thread
+    global player, sessions, session_threads, player_thread
 
     log_and_notify(addonname, "Starting FCast receiver ...")
     # List of active sessions
@@ -285,6 +298,7 @@ def main():
     s.settimeout(FCAST_TIMEOUT / 1000)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+    player = FCastPlayer(sessions)
     player_thread = Thread(target=check_player)
     player_thread.start()
 
@@ -314,11 +328,11 @@ def main():
                 conn.setblocking(False)
                 # Create a new thread for the connection
                 t = Thread(target=connection_handler, args=(conn, addr))
-                sessions.append(t)
+                session_threads.append(t)
                 t.start()
 
         # Remove dead threads from sessions list on every timeout or other exception
-        sessions = [t for t in sessions if t.is_alive()]
+        session_threads = [t for t in session_threads if t.is_alive()]
 
         if monitor.waitForAbort(0.250):
             break

@@ -1,6 +1,6 @@
 import sys
 import socket
-import threading
+from threading import Thread, Timer
 from typing import List
 import xbmcaddon
 import xbmcgui
@@ -11,7 +11,7 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from FCastSession import Event, FCastSession, PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage, SetVolumeMessage, VolumeUpdateMessage
 
-sessions: List[threading.Thread] = []
+sessions: List[Thread] = []
 # Constants
 FCAST_HOST = ''
 FCAST_PORT = 46899
@@ -24,14 +24,16 @@ addonname   = addon.getAddonInfo('name')
 
 plugin_handle = int(sys.argv[1]) if len(sys.argv) > 1 else None
 
+player_thread: Thread = None
+
 # Trottle repeated attempts at a function call
 def debounce(func, wait):
     def debounced(*args, **kwargs):
         debounced.timer.cancel()
-        debounced.timer = threading.Timer(wait, func, args=args, kwargs=kwargs)
+        debounced.timer = Timer(wait, func, args=args, kwargs=kwargs)
         debounced.timer.start()
 
-    debounced.timer = threading.Timer(0, lambda: None)  # Initial dummy timer
+    debounced.timer = Timer(0, lambda: None)  # Initial dummy timer
     return debounced
 
 class FCastPlayer(xbmc.Player):
@@ -79,7 +81,7 @@ class FCastPlayer(xbmc.Player):
         ))
         global http_server, http_shutdown_thread
         if http_server:
-            http_shutdown_thread = threading.Thread(target=shutdown_http_server)
+            http_shutdown_thread = Thread(target=shutdown_http_server)
             http_shutdown_thread.start()
     
     def onPlayBackError(self) -> None:
@@ -104,8 +106,8 @@ player: FCastPlayer = None
 seeks: list[float] = []
 
 http_server: HTTPServer = None
-http_server_thread: threading.Thread = None
-http_shutdown_thread: threading.Thread = None
+http_server_thread: Thread = None
+http_shutdown_thread: Thread = None
 
 def run_http_server():
     global http_server
@@ -119,12 +121,17 @@ def shutdown_http_server():
 
 def check_player():
     global player
-    if player is None or not player.isPlaying():
-        return
-    
-    # Update the current time if it has changed
-    if int(player.getTime()) != player.prev_time:
-        player.onPlayBackTimeChanged()
+    log_and_notify(addonname, "Starting player thread", notify=False)
+    monitor = xbmc.Monitor()
+    while not monitor.abortRequested():
+        if player is not None and player.isPlaying():
+            # Update the current time if it has changed
+            if int(player.getTime()) != player.prev_time:
+                player.onPlayBackTimeChanged()        
+        
+        if monitor.waitForAbort(0.05):
+            break
+    log_and_notify(addonname, "Exiting player thread", notify=False)
 
 # Helper function to both print a message to the Kodi logs and create a notification
 def log_and_notify(tag, msg, icon=xbmcgui.NOTIFICATION_INFO, timeout=3000, loglevel=xbmc.LOGDEBUG, notify=True):
@@ -175,7 +182,7 @@ def handle_play(session: FCastSession, message: PlayMessage):
             # Picks a random available port
             http_server = HTTPServer(('', 0), http_request_handler)
             http_port = int(http_server.socket.getsockname()[1])
-            http_server_thread = threading.Thread(target=run_http_server)
+            http_server_thread = Thread(target=run_http_server)
             http_server_thread.start()
             url = f'http://localhost:{http_port}/stream.mpd'
 
@@ -260,9 +267,6 @@ def connection_handler(conn, addr):
         except BlockingIOError:
             pass
 
-        # Some logic to periodically check for changes in the player's state
-        check_player()
-
         if monitor.waitForAbort(0.05):
             break
 
@@ -270,7 +274,7 @@ def connection_handler(conn, addr):
     log_and_notify(addonname, "Connection closed from %s" % addr[0])
 
 def main():
-    global sessions
+    global sessions, player_thread
 
     log_and_notify(addonname, "Starting FCast receiver ...")
     # List of active sessions
@@ -280,6 +284,9 @@ def main():
     s.setblocking(False)
     s.settimeout(FCAST_TIMEOUT / 1000)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    player_thread = Thread(target=check_player)
+    player_thread.start()
 
     try:
         s.bind((FCAST_HOST, FCAST_PORT))
@@ -306,7 +313,7 @@ def main():
                 conn, addr = s.accept()
                 conn.setblocking(False)
                 # Create a new thread for the connection
-                t = threading.Thread(target=connection_handler, args=(conn, addr))
+                t = Thread(target=connection_handler, args=(conn, addr))
                 sessions.append(t)
                 t.start()
 
@@ -319,7 +326,7 @@ def main():
     s.close()
     global http_server
     if http_server:
-        shutdown_thread = threading.Thread(target=shutdown_http_server)
+        shutdown_thread = Thread(target=shutdown_http_server)
         shutdown_thread.start()
 
     log_and_notify(addonname, "Server stopped")

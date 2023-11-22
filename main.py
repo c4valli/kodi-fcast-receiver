@@ -6,6 +6,8 @@ import xbmcaddon
 import xbmcgui
 import xbmc
 import selectors
+from urllib.parse import urlparse, parse_qs
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from FCastSession import Event, FCastSession, PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage, SetVolumeMessage, VolumeUpdateMessage
 
@@ -33,9 +35,6 @@ def debounce(func, wait):
     return debounced
 
 class FCastPlayer(xbmc.Player):
-    # TODO: Since there is no callback when the time changes, a peridoc timed function needs to be called for
-    #  every 1 second (or whatever the current playback speed is set to)
-
     playback_speed: float = 1.0
     session: FCastSession
     is_paused: bool = False
@@ -134,15 +133,25 @@ def log_and_notify(tag, msg, icon=xbmcgui.NOTIFICATION_INFO, timeout=3000, logle
         xbmcgui.Dialog().notification(tag, msg, icon, timeout, True)
 
 def handle_play(session: FCastSession, message: PlayMessage):
+    log_and_notify(addonname, f"Client request play", notify=False)
     play_item: xbmcgui.ListItem = None
     url: str = ''
     play_item = xbmcgui.ListItem()
     if message.url:
         url = message.url
+        parsed_url = urlparse(url)
+        # Detect HLS stream
+        if Path(parsed_url.path).suffix == '.m3u8':
+            log_and_notify(addonname, 'Detected HLS stream', notify=False)
+            # Use inputstream adaptive to handle HLS stream
+            play_item.setContentLookup(False)
+            play_item.setMimeType('application/x-mpegURL')
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+            play_item.setProperty('inputstream.adaptive.stream_selection_type', 'adaptive')
     elif message.content:
         if message.container in ['application/dash+xml', 'application/xml+dash']:
             # Basing this off what the YouTube addon does to enable dash
-            play_item = xbmcgui.ListItem()
             play_item.setContentLookup(False)
             play_item.setMimeType('application/xml+dash')
             play_item.setProperty('inputstream', 'inputstream.adaptive')
@@ -172,6 +181,8 @@ def handle_play(session: FCastSession, message: PlayMessage):
 
     if play_item:
         play_item.setPath(url)
+        if player.isPlaying():
+            player.stop()
         player.play(item=url, listitem=play_item)
 
 def do_seek():

@@ -4,7 +4,7 @@ import socket
 import struct
 from typing import Callable, Dict
 
-from FCastPackets import *
+from .FCastPackets import *
 
 class SessionState(int, Enum):
     IDLE = 0

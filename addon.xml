@@ -4,7 +4,7 @@
 		<import addon="xbmc.python" version="3.0.0"/>
 		<import addon="inputstream.adaptive" version="20.3.1"/>
 	</requires>
-	<extension point="xbmc.service" library="main.py" />
+	<extension point="xbmc.service" library="resources/lib/startup.py" />
 	<extension point="xbmc.addon.metadata">
 		<platform>all</platform>
 		<summary lang="en">Kodi FCast Receiver</summary>

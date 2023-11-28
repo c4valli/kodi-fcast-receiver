@@ -4,8 +4,8 @@ import random
 import socket
 import threading
 
-from FCastSession import Event, FCastSession, OpCode
-from FCastPackets import PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage
+from resources.lib.fcast_plugin.FCastSession import Event, FCastSession, OpCode
+from resources.lib.fcast_plugin.FCastPackets import PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage
 
 FCAST_HOST = ''
 FCAST_PORT = 46899

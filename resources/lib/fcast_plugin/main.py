@@ -48,9 +48,8 @@ def check_player():
 
 def handle_play(session: FCastSession, message: PlayMessage):
     log_and_notify(f"Client request play", notify=False)
-    play_item: xbmcgui.ListItem = None
+    play_item: xbmcgui.ListItem = xbmcgui.ListItem()
     url: str = ''
-    play_item = xbmcgui.ListItem()
     if message.url:
         url = message.url
         parsed_url = urlparse(url)

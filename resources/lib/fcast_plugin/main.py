@@ -1,8 +1,7 @@
 import sys
 import socket
-from threading import Thread, Timer
+from threading import Thread
 from typing import List
-import xbmcaddon
 import xbmcgui
 import xbmc
 import selectors
@@ -48,8 +47,9 @@ def check_player():
 
 def handle_play(session: FCastSession, message: PlayMessage):
     log_and_notify(f"Client request play", notify=False)
-    play_item: xbmcgui.ListItem = xbmcgui.ListItem()
-    url: str = ''
+    play_item: xbmcgui.ListItem = None
+    url: str = ""
+
     if message.url:
         url = message.url
         parsed_url = urlparse(url)
@@ -57,6 +57,7 @@ def handle_play(session: FCastSession, message: PlayMessage):
         if Path(parsed_url.path).suffix == '.m3u8':
             log_and_notify('Detected HLS stream', notify=False)
             # Use inputstream adaptive to handle HLS stream
+            play_item = xbmcgui.ListItem(path=url)
             play_item.setContentLookup(False)
             play_item.setMimeType('application/x-mpegURL')
             play_item.setProperty('inputstream', 'inputstream.adaptive')
@@ -64,14 +65,16 @@ def handle_play(session: FCastSession, message: PlayMessage):
             play_item.setProperty('inputstream.adaptive.stream_selection_type', 'adaptive')
     elif message.content:
         if message.container in ['application/dash+xml', 'application/xml+dash']:
-            # Basing this off what the YouTube addon does to enable dash
-            play_item.setContentLookup(False)
-            play_item.setMimeType('application/xml+dash')
-            play_item.setProperty('inputstream', 'inputstream.adaptive')
-            play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
+            log_and_notify('Detected DASH stream', notify=False)
             # Use data URLs to avoid having to host the manifest with HTTP
             base64_content = b64encode(message.content.encode('utf-8')).decode('ascii')
-            url = f'data:application/xml+dash;base64,{base64_content}'
+            url = f'data:{message.container};base64,{base64_content}'
+            # Basing this off what the YouTube addon does to enable dash
+            play_item = xbmcgui.ListItem(path=url)
+            play_item.setContentLookup(False)
+            play_item.setMimeType(message.container)
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
 
     if play_item:
         play_item.setPath(url)

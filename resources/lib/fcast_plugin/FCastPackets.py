@@ -19,7 +19,7 @@ class SeekMessage:
         self.time = time
 
 class PlayBackUpdateMessage:
-    def __init__(self, time: float, duration: float, state: PlayBackState, speed: float = 1.0, generationTime: int = None) -> None:
+    def __init__(self, time: float, state: PlayBackState, speed: float = 1.0, duration: float = None, generationTime: int = None) -> None:
         self.time = time
         self.duration = duration
         self.speed = speed

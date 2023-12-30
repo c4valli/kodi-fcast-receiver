@@ -10,6 +10,7 @@ from pathlib import Path
 from base64 import b64encode
 
 from .FCastSession import Event, FCastSession, PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage, SetVolumeMessage, VolumeUpdateMessage
+from .FCastHTTPServer import FCastHTTPServer
 from .player import FCastPlayer
 from .util import log_and_notify, debounce
 
@@ -24,7 +25,10 @@ FCAST_BUFFER_SIZE = 32000
 plugin_handle = int(sys.argv[1]) if len(sys.argv) > 1 else None
 
 player_thread: Thread = None
-    
+
+# HTTP Server to stream manifest files
+http_server: FCastHTTPServer = None
+
 # Player needs to be a global so it stays in scope and doesn't get GC'd
 player: FCastPlayer = None
 
@@ -66,9 +70,10 @@ def handle_play(session: FCastSession, message: PlayMessage):
     elif message.content:
         if message.container in ['application/dash+xml', 'application/xml+dash']:
             log_and_notify('Detected DASH stream', notify=False)
-            # Use data URLs to avoid having to host the manifest with HTTP
-            base64_content = b64encode(message.content.encode('utf-8')).decode('ascii')
-            url = f'data:{message.container};base64,{base64_content}'
+
+            http_server.set_content(message.container, message.content)
+            url = f'http://{http_server.get_host()}:{http_server.get_port()}/manifest'
+
             # Basing this off what the YouTube addon does to enable dash
             play_item = xbmcgui.ListItem(path=url)
             play_item.setContentLookup(False)
@@ -129,7 +134,7 @@ def handle_volume(session: FCastSession, message: SetVolumeMessage):
 
 # Connection handler thread function
 def connection_handler(conn: socket.socket, addr):
-    global player
+    global player, http_server
 
     monitor = xbmc.Monitor()
     log_and_notify("Connection from %s" % addr[0])
@@ -168,7 +173,7 @@ def connection_handler(conn: socket.socket, addr):
     log_and_notify("Connection closed from %s" % addr[0])
 
 def main():
-    global player, sessions, session_threads, player_thread
+    global player, sessions, session_threads, player_thread, http_server
 
     log_and_notify("Starting FCast receiver ...")
     # List of active sessions
@@ -182,6 +187,10 @@ def main():
     player = FCastPlayer(sessions)
     player_thread = Thread(target=check_player)
     player_thread.start()
+
+    # Create HTTP server to stream manifest files
+    http_server = FCastHTTPServer()
+    http_server.start()
 
     try:
         s.bind((FCAST_HOST, FCAST_PORT))
@@ -219,6 +228,8 @@ def main():
             break
 
     s.close()
+
+    http_server.stop()
 
     log_and_notify("Server stopped")
     exit()

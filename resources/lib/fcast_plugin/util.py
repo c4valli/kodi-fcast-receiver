@@ -8,10 +8,10 @@ addon       = xbmcaddon.Addon()
 addonname   = addon.getAddonInfo('name')
 
 # Helper function to both print a message to the Kodi logs and create a notification
-def log_and_notify(msg, icon=xbmcgui.NOTIFICATION_INFO, timeout=3000, loglevel=xbmc.LOGDEBUG, notify=True):
+def log_and_notify(msg, icon=xbmcgui.NOTIFICATION_INFO, timeout=3000, loglevel=xbmc.LOGDEBUG, notify=True, sound=False):
     xbmc.log("%s: %s" % (addonname, msg), level=loglevel)
     if notify:
-        xbmcgui.Dialog().notification(addonname, msg, icon, timeout, True)
+        xbmcgui.Dialog().notification(addonname, msg, icon, timeout, sound)
 
 # Trottle repeated attempts at a function call
 def debounce(func, wait):

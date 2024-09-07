@@ -5,6 +5,7 @@ import struct
 from typing import Callable, Dict, Optional
 
 from .FCastPackets import *
+from .util import log
 
 class SessionState(int, Enum):
     IDLE = 0
@@ -60,6 +61,9 @@ class FCastSession:
         self.__send(OpCode.VOLUME_UPDATE, value)
 
     def __send(self, opcode: OpCode, message = None):
+        if not self.client:
+            return
+
         # FCast packet header
         json_message = json.dumps(message.__dict__) if message else None
         body_size = (len(json_message) if json_message else 0) + 1
@@ -72,8 +76,12 @@ class FCastSession:
             packet += json_message.encode("utf-8")
 
         # Send the packet
-        if self.client:
+        try:
             self.client.send(packet)
+        except Exception as e:
+            log("Error while sending packet to client, destroying socket...")
+            log(str(e))
+            self.client = None
 
     def process_bytes(self, received_bytes: bytes):
         if not received_bytes or len(received_bytes) <= 0:

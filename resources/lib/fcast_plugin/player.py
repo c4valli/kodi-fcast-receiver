@@ -1,7 +1,7 @@
 import xbmc
 
 from .FCastSession import FCastSession, PlayBackUpdateMessage, PlayBackState
-from .util import log_and_notify
+from .util import log
 
 from typing import List
 
@@ -27,7 +27,7 @@ class FCastPlayer(xbmc.Player):
             self.pause()
 
     def onAVStarted(self) -> None:
-        log_and_notify("Playback started")
+        log("Playback started")
         self.is_paused = False
         # Start time loop once the player is active
         self.onPlayBackTimeChanged()

@@ -7,12 +7,11 @@ import xbmc
 import selectors
 from urllib.parse import urlparse
 from pathlib import Path
-from base64 import b64encode
 
 from .FCastSession import Event, FCastSession, PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage, SetVolumeMessage, VolumeUpdateMessage
 from .FCastHTTPServer import FCastHTTPServer
 from .player import FCastPlayer
-from .util import log_and_notify, debounce
+from .util import log, notify, debounce
 
 session_threads: List[Thread] = []
 sessions: List[FCastSession] = []
@@ -38,7 +37,7 @@ seeks: list[float] = []
 
 def check_player():
     global player
-    log_and_notify("Starting player thread", notify=False)
+    log("Starting player thread")
     monitor = xbmc.Monitor()
     while not monitor.abortRequested():
         if player and player.isPlaying():
@@ -48,10 +47,10 @@ def check_player():
         
         if monitor.waitForAbort(0.05):
             break
-    log_and_notify("Exiting player thread", notify=False)
+    log("Exiting player thread")
 
 def handle_play(session: FCastSession, message = None):
-    log_and_notify(f"Client request play", notify=False)
+    log(f"Client request play")
     play_item: Optional[xbmcgui.ListItem] = None
     url: str = ""
 
@@ -66,7 +65,7 @@ def handle_play(session: FCastSession, message = None):
 
         # Detect HLS stream
         if Path(parsed_url.path).suffix == '.m3u8':
-            log_and_notify('Detected HLS stream in URL', notify=False)
+            log('Detected HLS stream in URL')
             # Use inputstream adaptive to handle HLS stream
             play_item.setContentLookup(False)
             play_item.setMimeType('application/x-mpegURL')
@@ -74,7 +73,7 @@ def handle_play(session: FCastSession, message = None):
             play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
             play_item.setProperty('inputstream.adaptive.stream_selection_type', 'adaptive')
         else:
-            log_and_notify('Detected URL', notify=False)
+            log('Detected URL')
             if message.container:
                 play_item.setContentLookup(False)
                 play_item.setMimeType(message.container)
@@ -83,7 +82,7 @@ def handle_play(session: FCastSession, message = None):
 
     elif message.content:
         if message.container in ['application/dash+xml', 'application/xml+dash']:
-            log_and_notify('Detected DASH stream', notify=False)
+            log('Detected DASH stream')
 
             if http_server:
                 http_server.set_content(message.container, message.content)
@@ -96,10 +95,10 @@ def handle_play(session: FCastSession, message = None):
                 play_item.setProperty('inputstream', 'inputstream.adaptive')
                 play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
         else:
-            log_and_notify(f'Unhandled content container {message.container}')
+            notify(f'Unhandled content container {message.container}')
 
     if player and play_item:
-        log_and_notify('Starting new playback ...')
+        notify('Starting player ...')
         play_item.setPath(url)
         if player.isPlaying():
             player.stop()
@@ -122,7 +121,7 @@ def handle_seek(session: FCastSession, message = None):
     if not message:
         return
 
-    log_and_notify(f"Client request seek to {message.time}", notify=False)
+    log(f"Client request seek to {message.time}")
     # Send FCastMessage so the client's seek bar position updates better
     session.send_playback_update(PlayBackUpdateMessage(
         message.time,
@@ -136,25 +135,25 @@ def handle_seek(session: FCastSession, message = None):
 
 def handle_stop(session: FCastPlayer, message = None):
     global player
-    log_and_notify(f"Client request stop", notify=False)
+    log(f"Client request stop")
     if player:
         player.stop()
 
 def handle_pause(session: FCastPlayer, message = None):
     global player
-    log_and_notify(f"Client request pause", notify=False)
+    log(f"Client request pause")
     if player:
         player.doPause()
 
 def handle_resume(session: FCastPlayer, message = None):
     global player
-    log_and_notify(f"Client request resume", notify=False)
+    log(f"Client request resume")
     if player:
         player.doResume()
 
 def handle_volume(session: FCastSession, message: SetVolumeMessage):
     global player
-    log_and_notify(f"Client request set volume at {message.volume}", notify=False)
+    log(f"Client request set volume at {message.volume}")
     volume_level = int(message.volume * 100)
     xbmc.executebuiltin(f'SetVolume({volume_level})')
 
@@ -163,7 +162,7 @@ def connection_handler(conn: socket.socket, addr):
     global player, http_server
 
     monitor = xbmc.Monitor()
-    log_and_notify("Connection from %s" % addr[0])
+    notify("Connection from %s" % addr[0])
 
     session = FCastSession(conn)
 
@@ -183,13 +182,13 @@ def connection_handler(conn: socket.socket, addr):
     while not monitor.abortRequested():
         try:
             buff = conn.recv(FCAST_BUFFER_SIZE)
-            if not buff or len(buff) <= 0:
-                break
-            session.process_bytes(buff)
+            if buff and len(buff) > 0:
+                session.process_bytes(buff)
         except BlockingIOError:
             # Normal behavior. Prevents blocking
             pass
-        except Exception:
+        except Exception as e:
+            log(str(e), xbmc.LOGERROR)
             break
 
         if monitor.waitForAbort(0.05):
@@ -198,12 +197,12 @@ def connection_handler(conn: socket.socket, addr):
     if player:
         player.removeSession(session)
     session.close()
-    log_and_notify("Connection closed from %s" % addr[0])
+    notify("Connection closed from %s" % addr[0])
 
 def main():
     global player, sessions, session_threads, player_thread, http_server
 
-    log_and_notify("Starting FCast receiver ...")
+    notify("Starting FCast receiver ...")
     # List of active sessions
 
     # Create a socket for the FCast receiver
@@ -224,7 +223,7 @@ def main():
         s.bind((FCAST_HOST, FCAST_PORT))
         s.listen()
     except:
-        log_and_notify("Bind failed", xbmcgui.NOTIFICATION_ERROR)
+        notify("Bind failed", xbmcgui.NOTIFICATION_ERROR)
         s.close()
         exit()
 
@@ -232,7 +231,7 @@ def main():
     selector = selectors.DefaultSelector()
     selector.register(s, selectors.EVENT_READ, data=None)
 
-    log_and_notify("Server listening on port %d" % FCAST_PORT, timeout=1000)
+    notify("Server listening on port %d" % FCAST_PORT, timeout=1000)
 
     monitor = xbmc.Monitor()
     # Loop for new connections
@@ -259,7 +258,7 @@ def main():
 
     http_server.stop()
 
-    log_and_notify("Server stopped")
+    notify("Server stopped")
     exit()
 
 if __name__ == '__main__':

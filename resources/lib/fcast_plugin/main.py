@@ -61,16 +61,26 @@ def handle_play(session: FCastSession, message = None):
     if message.url:
         url = message.url
         parsed_url = urlparse(url)
+
+        play_item = xbmcgui.ListItem(path=url)
+
         # Detect HLS stream
         if Path(parsed_url.path).suffix == '.m3u8':
-            log_and_notify('Detected HLS stream', notify=False)
+            log_and_notify('Detected HLS stream in URL', notify=False)
             # Use inputstream adaptive to handle HLS stream
-            play_item = xbmcgui.ListItem(path=url)
             play_item.setContentLookup(False)
             play_item.setMimeType('application/x-mpegURL')
             play_item.setProperty('inputstream', 'inputstream.adaptive')
             play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
             play_item.setProperty('inputstream.adaptive.stream_selection_type', 'adaptive')
+        else:
+            log_and_notify('Detected URL', notify=False)
+            if message.container:
+                play_item.setContentLookup(False)
+                play_item.setMimeType(message.container)
+            else:
+                play_item.setContentLookup(True)
+
     elif message.content:
         if message.container in ['application/dash+xml', 'application/xml+dash']:
             log_and_notify('Detected DASH stream', notify=False)
@@ -85,8 +95,11 @@ def handle_play(session: FCastSession, message = None):
                 play_item.setMimeType(message.container)
                 play_item.setProperty('inputstream', 'inputstream.adaptive')
                 play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
+        else:
+            log_and_notify(f'Unhandled content container {message.container}')
 
     if player and play_item:
+        log_and_notify('Starting new playback ...')
         play_item.setPath(url)
         if player.isPlaying():
             player.stop()

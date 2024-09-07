@@ -15,10 +15,14 @@ def log_and_notify(msg, icon=xbmcgui.NOTIFICATION_INFO, timeout=3000, loglevel=x
 
 # Trottle repeated attempts at a function call
 def debounce(func, wait):
-    def debounced(*args, **kwargs):
-        debounced.timer.cancel()
-        debounced.timer = Timer(wait, func, args=args, kwargs=kwargs)
-        debounced.timer.start()
+    class _debounce:
+        timer: Timer
 
-    debounced.timer = Timer(0, lambda: None)  # Initial dummy timer
-    return debounced
+        @staticmethod
+        def debounced(*args, **kwargs):
+            _debounce.timer.cancel()
+            _debounce.timer = Timer(wait, func, args=args, kwargs=kwargs)
+            _debounce.timer.start()
+
+    _debounce.timer = Timer(0, lambda: None)  # Initial dummy timer
+    return _debounce.debounced

@@ -13,13 +13,15 @@ class PlayMessage:
         url: Optional[str] = None,
         time: Optional[float] = None,
         content: Optional[str] = None,
-        speed: float = 1.0
+        speed: float = 1.0,
+        headers = None
     ) -> None:
         self.container = container
         self.url = url
         self.content = content
         self.time = time
         self.speed = speed
+        self.headers = headers
 
 class SeekMessage:
     def __init__(self, time: float) -> None:

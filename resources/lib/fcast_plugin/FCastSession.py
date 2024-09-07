@@ -2,7 +2,7 @@ from enum import Enum
 import json
 import socket
 import struct
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from .FCastPackets import *
 
@@ -38,7 +38,7 @@ class FCastSession:
 
     buffer: bytes = bytes()
     packet_length: int = 0
-    client: socket.socket = None
+    client: Optional[socket.socket] = None
     state: SessionState = SessionState.DISCONNECTED
 
     __listeners: Dict[str, Callable[[any, any], any]] = {}
@@ -48,7 +48,8 @@ class FCastSession:
         self.state = SessionState.WAITING_FOR_LENGTH
 
     def close(self):
-        self.client.close()
+        if self.client:
+            self.client.close()
         self.client = None
         self.state = SessionState.DISCONNECTED
 
@@ -71,7 +72,8 @@ class FCastSession:
             packet += json_message.encode("utf-8")
 
         # Send the packet
-        self.client.send(packet)
+        if self.client:
+            self.client.send(packet)
 
     def process_bytes(self, received_bytes: bytes):
         if not received_bytes or len(received_bytes) <= 0:
@@ -96,7 +98,8 @@ class FCastSession:
             self.buffer = bytes()
 
             if self.packet_length > MAXIMUM_PACKET_LENGTH:
-                self.client.close()
+                if self.client:
+                    self.client.close()
                 self.state = SessionState.DISCONNECTED
                 raise Exception("Packet length %d exceeds maximum packet length %d" % (self.packet_length, MAXIMUM_PACKET_LENGTH))
             

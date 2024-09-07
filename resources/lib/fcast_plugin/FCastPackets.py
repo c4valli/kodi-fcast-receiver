@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Optional
 
 class PlayBackState(int, Enum):
     IDLE = 0
@@ -7,7 +8,13 @@ class PlayBackState(int, Enum):
     PAUSED = 2
 
 class PlayMessage:
-    def __init__(self, container: str, url: str = None, time: float = None, content: str = None, speed: float = 1.0) -> None:
+    def __init__(self,
+        container: str,
+        url: Optional[str] = None,
+        time: Optional[float] = None,
+        content: Optional[str] = None,
+        speed: float = 1.0
+    ) -> None:
         self.container = container
         self.url = url
         self.content = content
@@ -19,7 +26,13 @@ class SeekMessage:
         self.time = time
 
 class PlayBackUpdateMessage:
-    def __init__(self, time: float, state: PlayBackState, speed: float = 1.0, duration: float = None, generationTime: int = None) -> None:
+    def __init__(self,
+        time: float,
+        state: PlayBackState,
+        speed: float = 1.0,
+        duration: Optional[float] = None,
+        generationTime: Optional[int] = None
+    ) -> None:
         self.time = time
         self.duration = duration
         self.speed = speed
@@ -27,7 +40,10 @@ class PlayBackUpdateMessage:
         self.generationTime = generationTime if generationTime else datetime.now(timezone.utc).timestamp() * 1000
 
 class VolumeUpdateMessage:
-    def __init__(self, volume: float, generationTime: float = None) -> None:
+    def __init__(self,
+        volume: float,
+        generationTime: Optional[float] = None
+    ) -> None:
         self.volume = volume
         self.generationTime = generationTime if generationTime else datetime.now(timezone.utc).timestamp() * 1000
 

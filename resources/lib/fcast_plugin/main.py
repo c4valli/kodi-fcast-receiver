@@ -1,7 +1,7 @@
 import sys
 import socket
 from threading import Thread
-from typing import List
+from typing import List, Optional
 import xbmcgui
 import xbmc
 import selectors
@@ -16,6 +16,7 @@ from .util import log_and_notify, debounce
 
 session_threads: List[Thread] = []
 sessions: List[FCastSession] = []
+
 # Constants
 FCAST_HOST = ''
 FCAST_PORT = 46899
@@ -24,13 +25,13 @@ FCAST_BUFFER_SIZE = 32000
 
 plugin_handle = int(sys.argv[1]) if len(sys.argv) > 1 else None
 
-player_thread: Thread = None
+player_thread: Optional[Thread] = None
 
 # HTTP Server to stream manifest files
-http_server: FCastHTTPServer = None
+http_server: Optional[FCastHTTPServer] = None
 
 # Player needs to be a global so it stays in scope and doesn't get GC'd
-player: FCastPlayer = None
+player: Optional[FCastPlayer] = None
 
 # Used to queue up seeks
 seeks: list[float] = []
@@ -40,7 +41,7 @@ def check_player():
     log_and_notify("Starting player thread", notify=False)
     monitor = xbmc.Monitor()
     while not monitor.abortRequested():
-        if player.isPlaying():
+        if player and player.isPlaying():
             # Update the current time if it has changed
             if int(player.getTime()) != player.prev_time:
                 player.onPlayBackTimeChanged()        
@@ -49,10 +50,13 @@ def check_player():
             break
     log_and_notify("Exiting player thread", notify=False)
 
-def handle_play(session: FCastSession, message: PlayMessage):
+def handle_play(session: FCastSession, message = None):
     log_and_notify(f"Client request play", notify=False)
-    play_item: xbmcgui.ListItem = None
+    play_item: Optional[xbmcgui.ListItem] = None
     url: str = ""
+
+    if not message:
+        return
 
     if message.url:
         url = message.url
@@ -71,17 +75,18 @@ def handle_play(session: FCastSession, message: PlayMessage):
         if message.container in ['application/dash+xml', 'application/xml+dash']:
             log_and_notify('Detected DASH stream', notify=False)
 
-            http_server.set_content(message.container, message.content)
-            url = f'http://{http_server.get_host()}:{http_server.get_port()}/manifest'
+            if http_server:
+                http_server.set_content(message.container, message.content)
+                url = f'http://{http_server.get_host()}:{http_server.get_port()}/manifest'
 
-            # Basing this off what the YouTube addon does to enable dash
-            play_item = xbmcgui.ListItem(path=url)
-            play_item.setContentLookup(False)
-            play_item.setMimeType(message.container)
-            play_item.setProperty('inputstream', 'inputstream.adaptive')
-            play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
+                # Basing this off what the YouTube addon does to enable dash
+                play_item = xbmcgui.ListItem(path=url)
+                play_item.setContentLookup(False)
+                play_item.setMimeType(message.container)
+                play_item.setProperty('inputstream', 'inputstream.adaptive')
+                play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
 
-    if play_item:
+    if player and play_item:
         play_item.setPath(url)
         if player.isPlaying():
             player.stop()
@@ -95,15 +100,20 @@ def do_seek():
         seeks.pop(0)
     elif len(seeks) > 0:
         # Last seek in the queue, seek to it
-        player.seekTime(seeks.pop(0))
+        if player:
+            player.seekTime(seeks.pop(0))
 
-def handle_seek(session: FCastSession, message: SeekMessage):
+def handle_seek(session: FCastSession, message = None):
     global player, seeks
+
+    if not message:
+        return
+
     log_and_notify(f"Client request seek to {message.time}", notify=False)
     # Send FCastMessage so the client's seek bar position updates better
     session.send_playback_update(PlayBackUpdateMessage(
         message.time,
-        PlayBackState.PAUSED if player.is_paused else PlayBackState.PLAYING,
+        PlayBackState.PAUSED if (player and player.is_paused) else PlayBackState.PLAYING,
     ))
 
     # Append this seek to the seeks "queue"
@@ -114,17 +124,20 @@ def handle_seek(session: FCastSession, message: SeekMessage):
 def handle_stop(session: FCastPlayer, message = None):
     global player
     log_and_notify(f"Client request stop", notify=False)
-    player.stop()
+    if player:
+        player.stop()
 
 def handle_pause(session: FCastPlayer, message = None):
     global player
     log_and_notify(f"Client request pause", notify=False)
-    player.doPause()
+    if player:
+        player.doPause()
 
 def handle_resume(session: FCastPlayer, message = None):
     global player
     log_and_notify(f"Client request resume", notify=False)
-    player.doResume()
+    if player:
+        player.doResume()
 
 def handle_volume(session: FCastSession, message: SetVolumeMessage):
     global player
@@ -150,7 +163,8 @@ def connection_handler(conn: socket.socket, addr):
     # session.on(Event.SET_VOLUME, handle_volume)
 
     # Allow Kodi to send playback update packets to this client
-    player.addSession(session)
+    if player:
+        player.addSession(session)
 
     # Receive data from the client and process it
     while not monitor.abortRequested():
@@ -168,7 +182,8 @@ def connection_handler(conn: socket.socket, addr):
         if monitor.waitForAbort(0.05):
             break
 
-    player.removeSession(session)
+    if player:
+        player.removeSession(session)
     session.close()
     log_and_notify("Connection closed from %s" % addr[0])
 

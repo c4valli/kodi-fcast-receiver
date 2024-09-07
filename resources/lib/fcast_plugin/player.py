@@ -12,9 +12,9 @@ class FCastPlayer(xbmc.Player):
     # Used to perform time updates
     prev_time: int = -1
 
-    def __init__(self, sessions: FCastSession):
+    def __init__(self, sessions: List[FCastSession]):
         self.sessions = sessions
-        super().__init__(self)
+        super().__init__()
     
     def doPause(self) -> None:
         if not self.is_paused:

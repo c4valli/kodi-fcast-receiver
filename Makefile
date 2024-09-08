@@ -1,10 +1,13 @@
-
-TARGET_ZIP=dist.zip
-TARGET_DIR=$(shell basename `pwd`)
-TARGET_EXCLUDE="${TARGET_DIR}/.git/*" "${TARGET_DIR}/venv/*" "${TARGET_DIR}/.gitignore" "${TARGET_DIR}/Makefile" "${TARGET_DIR}/__pycache__" "${TARGET_DIR}/test.py"
+NAME=kodi-fcast-receiver
+VERSION=0.0.1
+SOURCE_DIR=$(shell basename `pwd`)
+TARGET_DIR=$(shell basename `pwd`)/dist
+TARGET_ZIP=${NAME}-${VERSION}.zip
+SOURCE_EXCLUDE="${SOURCE_DIR}/.git/*" "${SOURCE_DIR}/venv/*" "${SOURCE_DIR}/.gitignore" "${SOURCE_DIR}/Makefile" "${SOURCE_DIR}/__pycache__" "${TARGET_DIR}"
 
 all: clean
-	@cd .. && zip -r ${TARGET_DIR}/${TARGET_ZIP} ${TARGET_DIR} -x ${TARGET_EXCLUDE} @
+	@mkdir -p ${TARGET_DIR}
+	@cd .. && zip -r ${TARGET_DIR}/${TARGET_ZIP} ${SOURCE_DIR} -x ${SOURCE_EXCLUDE} @
 
 clean:
-	@rm -fv ${TARGET_ZIP}
+	@rm -fv ${TARGET_DIR}/*

@@ -2,7 +2,7 @@
 venv/
 
 # Target addon
-dist.zip
+dist/
 
 # Cache
 __pycache__/

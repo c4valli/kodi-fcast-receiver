@@ -2,7 +2,7 @@ from enum import Enum
 import json
 import socket
 import struct
-from typing import Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from .FCastPackets import *
 from .util import log
@@ -23,6 +23,11 @@ class OpCode(int, Enum):
     PLAYBACK_UPDATE = 6
     VOLUME_UPDATE = 7
     SET_VOLUME = 8
+    PLAYBACK_ERROR = 9
+    SET_SPEED = 10
+    VERSION = 11
+    PING = 12
+    PONG = 13
 
 class Event(str, Enum):
     PLAY = "play"
@@ -31,9 +36,11 @@ class Event(str, Enum):
     STOP = "stop"
     SEEK = "seek"
     SET_VOLUME = "set_volume"
+    SET_SPEED = "set_speed"
 
 LENGTH_BYTES = 4
 MAXIMUM_PACKET_LENGTH = 32000
+FCAST_VERSION = 1
 
 class FCastSession:
 
@@ -42,7 +49,7 @@ class FCastSession:
     client: Optional[socket.socket] = None
     state: SessionState = SessionState.DISCONNECTED
 
-    __listeners: Dict[str, Callable[[any, any], any]] = {}
+    __listeners: Dict[str, List[Callable[[Any, Any], Any]]] = {}
 
     def __init__(self, client: socket.socket):
         self.client = client
@@ -133,7 +140,7 @@ class FCastSession:
             if bytes_remaining > 0:
                 self.__handle_length_bytes(received_bytes[bytes_to_read:])
 
-    def on(self, event: Event, callback: Callable[[any], any]):
+    def on(self, event: Event, callback: Callable[[Any, Any], Any]):
         if event not in self.__listeners:
             self.__listeners[event] = []
         self.__listeners[event].append(callback)
@@ -149,7 +156,7 @@ class FCastSession:
         body = self.buffer[1:] if len(self.buffer) > 1 else None
 
         if opcode == OpCode.PLAY:
-            self.__emit(Event.PLAY, PlayMessage(**json.loads(body)))
+            self.__emit(Event.PLAY, PlayMessage(**json.loads(body)) if body else None)
         elif opcode == OpCode.PAUSE:
             self.__emit(Event.PAUSE)
         elif opcode == OpCode.RESUME:
@@ -157,8 +164,17 @@ class FCastSession:
         elif opcode == OpCode.STOP:
             self.__emit(Event.STOP)
         elif opcode == OpCode.SEEK:
-            self.__emit(Event.SEEK, SeekMessage(**json.loads(body)))
+            self.__emit(Event.SEEK, SeekMessage(**json.loads(body)) if body else None)
         elif opcode == OpCode.SET_VOLUME:
-            self.__emit(Event.SET_VOLUME, SetVolumeMessage(**json.loads(body)))
+            self.__emit(Event.SET_VOLUME, SetVolumeMessage(**json.loads(body)) if body else None)
+        elif opcode == OpCode.SET_SPEED:
+            self.__emit(Event.SET_SPEED, SetSpeedMessage(**json.loads(body)) if body else None)
+        elif opcode == OpCode.PING:
+            self.__send(OpCode.PONG)
+        elif opcode == OpCode.VERSION:
+            client_version = VersionMessage(**json.loads(body)) if body else None
+            if client_version:
+                log(f"Client reported version: {client_version.version}, sending back our version {FCAST_VERSION}")
+                self.__send(OpCode.VERSION, VersionMessage(version=FCAST_VERSION))
         else:
             raise Exception("Unhandled opcode %s" % opcode)

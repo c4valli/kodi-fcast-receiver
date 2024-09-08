@@ -8,7 +8,8 @@ import selectors
 from urllib.parse import urlparse
 from pathlib import Path
 
-from .FCastSession import Event, FCastSession, PlayMessage, PlayBackUpdateMessage, PlayBackState, SeekMessage, SetVolumeMessage, VolumeUpdateMessage
+from .FCastSession import Event, FCastSession
+from .FCastPackets import *
 from .FCastHTTPServer import FCastHTTPServer
 from .player import FCastPlayer
 from .util import log, notify, debounce
@@ -157,6 +158,10 @@ def handle_volume(session: FCastSession, message: SetVolumeMessage):
     volume_level = int(message.volume * 100)
     xbmc.executebuiltin(f'SetVolume({volume_level})')
 
+def handle_speed(session: FCastSession, message: SetSpeedMessage):
+    global player
+    log(f"Client request set speed at {message.speed}. Action currently not supported")
+
 # Connection handler thread function
 def connection_handler(conn: socket.socket, addr):
     global player, http_server
@@ -173,6 +178,8 @@ def connection_handler(conn: socket.socket, addr):
     session.on(Event.SEEK, handle_seek)
     # TODO: Find out how to get/set volume
     # session.on(Event.SET_VOLUME, handle_volume)
+    # TODO: Find out how to get/set playback speed
+    # session.on(Event.SET_SPEED, handle_speed)
 
     # Allow Kodi to send playback update packets to this client
     if player:

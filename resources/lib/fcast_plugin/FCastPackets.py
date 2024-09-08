@@ -60,3 +60,7 @@ class SetSpeedMessage:
 class PlaybackErrorMessage:
     def __init__(self, message: str) -> None:
         self.message = message
+
+class VersionMessage:
+    def __init__(self, version: float) -> None:
+        self.version = version

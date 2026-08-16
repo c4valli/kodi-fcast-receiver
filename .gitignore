@@ -4,6 +4,18 @@ venv/
 # Target addon
 dist/
 
+# Generated Kodi repository and landing page, i.e. the whole GitHub Pages
+# artifact. Built by `make pages` and published by CI, never committed --
+# the page's sources live in site/.
+repo/
+
+# Worktree of the newest release tag, which .github/workflows/pages.yml builds
+# the repository from. Only appears if that workflow is run locally.
+.release/
+
 # Cache
 __pycache__/
 *.pyc
+
+# Temp files
+.tmp/

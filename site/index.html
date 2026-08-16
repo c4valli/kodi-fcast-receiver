@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FCast Receiver for Kodi</title>
+<meta name="description" content="An unofficial FCast receiver add-on for Kodi. Cast video, audio and photos from Grayjay and other FCast senders straight to your media centre, over an open protocol, with no cloud and no account.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="FCast Receiver for Kodi">
+<meta property="og:description" content="Cast video, audio and photos from Grayjay and other FCast senders straight to Kodi. Open protocol, no cloud, no account.">
+<meta property="og:url" content="https://ozankiratli.github.io/kodi-fcast-receiver/">
+<meta property="og:image" content="https://ozankiratli.github.io/kodi-fcast-receiver/icon.png">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <img class="logo" src="icon.png" alt="" width="72" height="72">
+  <h1>FCast Receiver for Kodi</h1>
+  <p class="tagline">
+    Cast video, audio and photos from Grayjay and other FCast senders straight to your
+    media centre. An open protocol, on your own network — no cloud, no account,
+    nothing phoning home.
+  </p>
+  <p class="badges">
+    <span>Kodi 21 (Omega) or newer</span>
+    <span>FCast protocol v3</span>
+    <span>GPL-2.0</span>
+  </p>
+  <p class="cta">
+    <a class="button primary" href="#install">Installation</a>
+    <a class="button" href="https://github.com/ozankiratli/kodi-fcast-receiver">Source on GitHub</a>
+  </p>
+  <p class="banner">
+    <b>Try <a href="#prerelease">p0.9.9-pre</a>.</b>
+    It is the biggest step the project has taken — the full FCast v3 protocol, photos,
+    playlists and volume control — and it is not in the add-on repository yet. Install the
+    zip by hand, and say how it goes.
+  </p>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#what">What it does</a>
+  <a href="#install">Install</a>
+  <a href="#prerelease">Test builds</a>
+  <a href="#manual">Manual</a>
+  <a href="#troubleshooting">Troubleshooting</a>
+</nav>
+
+<main>
+
+<section id="what">
+  <h2>What it does</h2>
+  <p>
+    <a href="https://fcast.org">FCast</a> is an open protocol for sending audio and video
+    from one device to another — the same job as Chromecast or AirPlay, without the closed
+    ecosystem. Anyone can write a sender or a receiver.
+  </p>
+  <p>
+    This add-on turns Kodi into an FCast receiver. It listens on TCP port <code>46899</code>
+    and advertises itself over mDNS as <code>_fcast._tcp</code>, so senders on the same network
+    find it by themselves. Senders that cannot discover it can be pointed at the box by IP address.
+  </p>
+
+  <ul class="features">
+    <li>
+      <h3>Video and audio</h3>
+      <p>DASH, HLS and direct streams, with the HTTP headers the sender attaches — so
+      streams from CDNs that check <code>Referer</code> or <code>User-Agent</code> play.</p>
+    </li>
+    <li>
+      <h3>Photos</h3>
+      <p>Cast pictures go to Kodi's picture viewer, downloaded before they are shown so the
+      screen never goes black waiting, and they hold off the screensaver while they are up.</p>
+    </li>
+    <li>
+      <h3>Queues that move</h3>
+      <p>The receiver reports each item as it finishes, so a sender's own queue advances.
+      It also walks playlists handed to it whole, pictures included.</p>
+    </li>
+    <li>
+      <h3>Two-way control</h3>
+      <p>Volume, seek, pause and playback speed in both directions, and several senders
+      stay in step with each other through <code>PlayUpdate</code>.</p>
+    </li>
+  </ul>
+
+  <p class="note">
+    <strong>Tested senders.</strong> <a href="https://grayjay.app">Grayjay</a>, the
+    <a href="https://docs.fcast.org/sender/">official FCast senders</a>, and
+    <a href="https://f-droid.org/packages/app.fedilab.castlab/">CastLab</a> for Android
+    (beta — see <a href="#troubleshooting">Troubleshooting</a>).
+  </p>
+</section>
+
+<section id="install">
+  <h2>Install</h2>
+
+  <p class="requirements">
+    <strong>You need</strong> Kodi 21 (Omega) or newer, and
+    <code>inputstream.adaptive</code> 21.5.9 or newer for HLS and DASH streams.
+  </p>
+
+  <p class="note">
+    <strong>Which version will I get?</strong> The repository serves the last proper release.
+    The v3 work described above — photos, playlists, volume — is in
+    <a href="#prerelease">p0.9.9-pre</a>, a hand-installed zip until it has had some feedback.
+    Install the repository regardless: it is what brings you the release when it lands, without
+    your having to come back here.
+  </p>
+
+  <h3>From the add-on repository <span class="pill">recommended</span></h3>
+  <p>
+    Installing the repository once lets Kodi update the receiver on its own, on every device.
+  </p>
+  <ol class="steps">
+    <li>
+      In Kodi, allow add-ons from unknown sources:<br>
+      <b>Settings → System → Add-ons → Unknown sources</b>
+    </li>
+    <li>
+      Download the repository zip:<br>
+      <a class="button primary download" href="repository.fcast.ozankiratli/repository.fcast.ozankiratli-1.0.0.zip">repository.fcast.ozankiratli-1.0.0.zip</a>
+      <span class="hint">Downloading on the Kodi box itself? Kodi's own file browser can reach
+      this URL directly in step 3.</span>
+    </li>
+    <li>
+      <b>Settings → Add-ons → Install from zip file</b>, and pick that zip
+    </li>
+    <li>
+      <b>Settings → Add-ons → Install from repository → FCast Receiver Repository →
+      Services → FCast Receiver</b>
+    </li>
+  </ol>
+  <p>
+    That is it — the service starts with Kodi. Kodi then checks for new versions on its own
+    schedule, as long as <b>Settings → System → Add-ons → Updates</b> is set to
+    <i>Install updates automatically</i>.
+  </p>
+
+  <h3>From a zip</h3>
+  <p>
+    Grab the add-on zip from the
+    <a href="https://github.com/ozankiratli/kodi-fcast-receiver/releases">releases page</a>
+    and use <b>Settings → Add-ons → Install from zip file</b>. Updates are then yours to do by hand.
+  </p>
+  <p class="note">
+    <strong>Already running a zip install?</strong> A zip install has no repository behind it,
+    so Kodi has nothing to check for new versions. Install the repository as above and Kodi
+    picks up newer releases for the add-on you already have — there is no need to uninstall it first.
+  </p>
+</section>
+
+<section id="prerelease">
+  <h2>Test builds</h2>
+
+  <h3>p0.9.9-pre — the full v3 protocol <span class="pill">try this</span></h3>
+  <p>
+    This is the build worth running. The receiver used to hold a connection to a modern sender
+    only by luck, and did little once it had one. It now implements FCast <b>v3</b> and
+    announces itself as such, and the parts that were missing or half-working do their job:
+  </p>
+
+  <ul class="whatsnew">
+    <li>
+      <b>Volume, in both directions.</b> A sender can set the volume on the box, and a change
+      made on the box goes back to the sender. Playback speed too, clamped to the 0.8×–1.5×
+      Kodi supports rather than failing outside it.
+    </li>
+    <li>
+      <b>Queues that move on.</b> The receiver reports each item as it finishes, with the item
+      attached — a report with nothing in it tells the sender nothing, which is why Grayjay's
+      queue used to strand on the video that had just ended.
+    </li>
+    <li>
+      <b>Playlists.</b> A sender can hand over a whole queue and the receiver walks it itself:
+      offset, per-item volume and speed, jumping between items, and a duration for pictures so
+      a photo in a queue moves on by itself.
+    </li>
+    <li>
+      <b>Photos that actually appear.</b> Cast pictures went to the video player, which showed
+      them for a few milliseconds and closed. They go to Kodi's picture viewer now, downloaded
+      before they are shown so the screen never goes black waiting, and they hold off the
+      screensaver while they are up.
+    </li>
+    <li>
+      <b>Senders that join late.</b> The <code>Initial</code> handshake tells a sender what is
+      already on screen when it connects, and <code>PlayUpdate</code> keeps several senders in
+      step with each other.
+    </li>
+    <li>
+      <b>Settings.</b> A configuration screen of its own — notifications, picture downloading,
+      keeping the screen awake, picture duration. See <a href="#settings">the manual</a>.
+    </li>
+    <li>
+      <b>Failures you can see.</b> Everything used to be logged at debug level, which Kodi
+      hides, so a failed download or discovery that never registered looked exactly like
+      working. Those are warnings now, and connections are logged as they happen.
+    </li>
+  </ul>
+
+  <p class="cta-inline">
+    <a class="button primary" href="https://github.com/ozankiratli/kodi-fcast-receiver/releases/download/p0.9.9-pre/service.fcast.receiver-0.9.9.pre.zip">Download p0.9.9-pre</a>
+    <a class="button" href="https://github.com/ozankiratli/kodi-fcast-receiver/releases/tag/p0.9.9-pre">Release notes</a>
+  </p>
+  <p class="hint">
+    Install it with <b>Settings → Add-ons → Install from zip file</b>. Already have the add-on?
+    Install the zip over it; there is nothing to uninstall first.
+  </p>
+
+  <div class="callout">
+    <p>
+      <b>Feedback is what this is waiting for.</b> The build stays a test build until it has had
+      some. Once it has, the same code goes out as a proper release through the add-on
+      repository, and every device that installed the repository picks it up on its own.
+    </p>
+    <p>
+      Anything odd — a sender that will not connect, a photo that never appears, a queue that
+      stops — is worth an
+      <a href="https://github.com/ozankiratli/kodi-fcast-receiver/issues">issue on GitHub</a>,
+      with the log lines from <a href="#logs">Reading the log</a>.
+    </p>
+  </div>
+
+  <h3>How test builds work</h3>
+  <p>
+    Builds marked <b>pre-release</b> on the
+    <a href="https://github.com/ozankiratli/kodi-fcast-receiver/releases">releases page</a> are
+    never published to the add-on repository, so no installed Kodi is offered one as an update
+    — you install the zip by hand if you want to try it.
+  </p>
+  <p>
+    Their version carries a <code>~</code> — this one is <code>0.9.9~pre</code> — which Kodi
+    sorts <i>below</i> the release that follows it. So the real release supersedes a test build
+    on its own, through the repository, with nothing to uninstall.
+  </p>
+</section>
+
+<section id="manual">
+  <h2>Manual</h2>
+
+  <h3>Casting to Kodi</h3>
+  <p>
+    Leave Kodi running. In your sender — Grayjay, an official FCast sender, CastLab — open the
+    cast menu and the Kodi box appears in the device list, named after the machine. Pick it, and
+    what you were watching starts on the television.
+  </p>
+  <p>
+    Nothing found in the list? The sender is not seeing the mDNS advertisement. Every sender can
+    also connect straight to an address: enter the Kodi machine's IP and port <code>46899</code>
+    by hand. See <a href="#discovery">Discovery</a> below.
+  </p>
+
+  <h3 id="kodi-setting">One Kodi setting worth changing</h3>
+  <p>
+    <b>Settings → Player → Videos → Sync playback to display</b> — set to <b>On</b>.
+    Playback speed control from a sender depends on it.
+  </p>
+
+  <h3 id="settings">Add-on settings</h3>
+  <p class="path">
+    <b>Settings → Add-ons → My add-ons → Services → FCast Receiver → Configure</b>
+  </p>
+
+  <dl class="settings">
+    <dt>Show on-screen notifications</dt>
+    <dd>
+      The messages shown when a sender connects, disconnects, or starts something playing.
+      Turn them off to keep the screen clear; errors are always shown regardless.
+    </dd>
+
+    <dt>Download pictures before showing them</dt>
+    <dd>
+      Kodi's picture viewer clears the screen the moment it is told to show something else, so
+      casting a second photo used to leave the screen black for the length of the download. With
+      this on, the picture already up stays there while the next one is fetched, and they swap
+      when it is ready. The last dozen pictures are kept, so stepping back through a slideshow, or
+      casting the same photo twice, downloads nothing again. Turn it off to hand the URL straight
+      to Kodi.
+    </dd>
+
+    <dt>Keep the screen awake while a picture is showing</dt>
+    <dd>
+      Kodi treats a single picture as an idle screen rather than as something playing, so its
+      screensaver starts up behind the picture, cannot come to the front past the picture viewer,
+      and on some skins that refusal is audible. With this on, a picture on screen counts as the
+      box being in use. Turn it off to let the screen sleep over a cast picture.
+    </dd>
+
+    <dt>Picture duration (seconds)</dt>
+    <dd>
+      How long a picture in a cast <i>playlist</i> stays on screen before the queue moves on.
+      A sender that asks for a duration of its own gets it, unless
+      <b>Ignore the duration the sender asks for</b> is set. Zero leaves each picture up until the
+      sender moves on.
+      <br>
+      <span class="hint">A picture cast on its own is never closed automatically, whatever this is
+      set to. It stays up until a sender stops it, or you close it from Kodi.</span>
+    </dd>
+  </dl>
+
+  <h3 id="logs">Reading the log</h3>
+  <p>
+    Connections and failures are logged. To see everything the add-on has to say, turn on
+    <b>Settings → System → Logging → Enable debug logging</b>, then on the Kodi machine:
+  </p>
+  <pre><code>grep "FCast Receiver:" ~/.kodi/temp/kodi.log</code></pre>
+  <p class="hint">
+    On LibreELEC and CoreELEC the log lives at <code>/storage/.kodi/temp/kodi.log</code>.
+  </p>
+</section>
+
+<section id="troubleshooting">
+  <h2>Troubleshooting</h2>
+
+  <details id="discovery">
+    <summary>The Kodi box does not appear in my sender's device list</summary>
+    <p>
+      Discovery is done over mDNS, through Avahi, so the receiver only advertises itself on Linux
+      hosts — LibreELEC, CoreELEC, Raspbian, Debian and friends. On Windows, macOS and Android the
+      receiver works, but senders have to be pointed at it by IP address and port
+      <code>46899</code>.
+    </p>
+    <p>
+      On Linux, check that the sender and the Kodi box are on the same network segment — many
+      routers keep a guest network, or a wireless band with client isolation, away from the rest of
+      the LAN. From another machine on the network:
+    </p>
+    <pre><code>avahi-browse -rt _fcast._tcp</code></pre>
+    <p>
+      If the service is not listed there, the log lines from
+      <a href="#logs">Reading the log</a> say which discovery backend was tried and why it failed.
+    </p>
+  </details>
+
+  <details>
+    <summary>Audio drifts out of sync during long playback</summary>
+    <p>
+      After a long pause, or roughly forty minutes in, the audio can begin skipping seconds while
+      the video speeds up to catch it. This is an <code>inputstream.adaptive</code> problem rather
+      than a receiver one: it reproduces with any add-on playing adaptive streams, whether or not
+      FCast is involved (<a href="https://github.com/xbmc/xbmc/issues/22625">xbmc/xbmc#22625</a>).
+      There is no workaround available from this add-on.
+    </p>
+  </details>
+
+  <details>
+    <summary>A CastLab photo album does not advance by itself</summary>
+    <p>
+      CastLab keeps its queue on the phone and sends one photo at a time, so each arrives as a
+      single cast rather than as a playlist. <b>Picture duration</b> does not apply to those, by
+      design: a photo cast on its own stays up until something dismisses it. Use CastLab's own
+      autoplay, or a sender that sends a real playlist.
+    </p>
+  </details>
+
+  <details>
+    <summary>I cannot reach the Kodi menus while a photo is on screen</summary>
+    <p>
+      Kodi's picture viewer is a modal dialog and draws above everything, Settings included, so
+      nothing else is reachable while a photo is up. This is Kodi's own behaviour — the official
+      FCast receiver behaves the same way. Stop the cast from the sender, or close the picture from
+      Kodi, and the interface comes back.
+    </p>
+  </details>
+
+  <details>
+    <summary>Playback speed from the sender does nothing</summary>
+    <p>
+      Turn on <b>Settings → Player → Videos → Sync playback to display</b>. Kodi supports speeds
+      between 0.8× and 1.5×; anything a sender asks for outside that range is clamped to the
+      nearest end rather than rejected.
+    </p>
+  </details>
+
+  <p class="note">
+    Something else? Open an
+    <a href="https://github.com/ozankiratli/kodi-fcast-receiver/issues">issue on GitHub</a>,
+    with the version you are running and the log lines from <a href="#logs">Reading the log</a>.
+  </p>
+</section>
+
+</main>
+
+<footer>
+  <p>
+    <a href="https://github.com/ozankiratli/kodi-fcast-receiver">Source</a> ·
+    <a href="https://github.com/ozankiratli/kodi-fcast-receiver/releases">Releases</a> ·
+    <a href="https://github.com/ozankiratli/kodi-fcast-receiver/issues">Issues</a> ·
+    <a href="https://fcast.org">fcast.org</a>
+  </p>
+  <p class="small">
+    An unofficial receiver, not affiliated with the FCast project or with Team Kodi.
+    Released under the GNU General Public License v2. Built on the work of
+    <a href="https://github.com/c4valli/kodi-fcast-receiver">c4valli</a> and
+    <a href="https://github.com/wolf3592/kodi-fcast-receiver">wolf3592</a>.
+  </p>
+</footer>
+
+</body>
+</html>

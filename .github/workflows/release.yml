@@ -1,0 +1,88 @@
+name: Publish add-on repository
+
+# Tag a release to publish it: bump the version in addon.xml, commit, then
+# `git tag v0.1.2 && git push --tags`. Kodi only offers an update when the
+# published version is higher than the installed one, so the bump is what makes
+# devices pick it up.
+#
+# Pre-release versions must be written with '~': addon.xml 1.0.0~beta1, tagged
+# v1.0.0-beta1, because a git ref cannot contain '~'. Kodi compares versions
+# Debian-style - everything after '-' is a revision, and a revision sorts
+# ABOVE no revision - so 1.0.0-beta1 would outrank the 1.0.0 that follows it
+# and nobody running the beta would ever be offered the release. '~' is the
+# one character that sorts below empty, which is what makes it work.
+#
+# Builds for testers go through prerelease.yml instead: tag them p1.0.0-beta1
+# or 1.0.0-beta1-pre and they are attached to a GitHub release without being
+# published to the repository at all.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run tests
+        run: make test
+
+      - name: Check the tag matches addon.xml
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          addon_version=$(sed -n 's/.*<addon .*version="\([^"]*\)".*/\1/p' addon.xml)
+          # See the note at the top: the tag v1.0.0-beta1 stands for the
+          # add-on version 1.0.0~beta1, since '~' cannot appear in a git ref.
+          # Done with sed rather than ${x/-/~}, where bash expands the tilde
+          # to $HOME and quietly produces 1.0.0/home/runnerbeta1.
+          expected=$(printf '%s' "${GITHUB_REF_NAME#v}" | sed 's/-/~/')
+          if [ "$addon_version" != "$expected" ]; then
+            echo "tag $GITHUB_REF_NAME expects addon.xml version $expected," >&2
+            echo "but addon.xml says $addon_version" >&2
+            exit 1
+          fi
+
+      - uses: actions/configure-pages@v6
+        id: pages
+
+      # base_url is where Pages will actually serve repo/ from, and it has to
+      # be baked into the repository add-on before the zip is built.
+      #
+      # `pages` is the repository plus the landing page. Both go up as one
+      # artifact because Pages serves one artifact per site: publishing the
+      # repository alone would take the site down, and pages.yml - which
+      # republishes the site when only site/ changes - has the same rule from
+      # the other side.
+      - name: Build add-on, repository and website
+        run: make pages REPO_URL=${{ steps.pages.outputs.base_url }}
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: repo
+
+      - name: Attach the add-on zip to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*.zip
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v5
+        id: deployment

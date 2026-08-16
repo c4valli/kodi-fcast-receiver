@@ -1,4 +1,3 @@
-
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
 from typing import cast, Dict, Optional
@@ -74,6 +73,7 @@ class FCastWebRequestHandler(BaseHTTPRequestHandler):
 
         self.send_response(200)
         self.send_header('Content-Type', self.get_fcast_server().get_content_type())
+        self.send_header('Content-Length', str(len(self.get_fcast_server().get_content())))
         self.end_headers()
         self.wfile.write(self.get_fcast_server().get_content().encode('utf-8'))
 

@@ -1,0 +1,74 @@
+name: Publish a prerelease
+
+# For builds that go to testers rather than to everyone.
+#
+# Two tag shapes land here: p<version> (p1.0.0-beta1) and <version>-pre. Both
+# run the tests, build the zip and attach it to a GitHub prerelease. Neither
+# touches the add-on repository or Pages, so no installed Kodi is ever offered
+# them as an update - that is what the v* tags in release.yml do. Testers
+# install the zip by hand and get the real release later through the
+# repository.
+#
+# Character ranges are not documented as supported in these filters, so the
+# glob is deliberately loose and the step below is what enforces the shape.
+on:
+  push:
+    tags:
+      - 'p*'
+      - '*-pre'
+
+permissions:
+  contents: write
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run tests
+        run: make test
+
+      - name: Work out the version this tag stands for
+        run: |
+          tag="$GITHUB_REF_NAME"
+          case "$tag" in
+            p[0-9]*)  version="${tag#p}" ;;
+            *-pre)    version="${tag%-pre}" ;;
+            *)
+              echo "tag $tag is neither p<version> nor <version>-pre" >&2
+              exit 1 ;;
+          esac
+
+          # A git ref cannot contain '~', but Kodi's version comparison needs
+          # one: it is Debian-style, so 1.0.0~beta1 sorts BEFORE 1.0.0 while
+          # 1.0.0-beta1 sorts after it - and a tester whose version outranks
+          # the release is never offered the release. So the tag p1.0.0-beta1
+          # stands for the add-on version 1.0.0~beta1.
+          #
+          # sed rather than ${version/-/~}: bash expands the tilde in a
+          # replacement string to $HOME, giving 1.0.0/home/runnerbeta1.
+          expected=$(printf '%s' "$version" | sed 's/-/~/')
+
+          addon_version=$(sed -n 's/.*<addon .*version="\([^"]*\)".*/\1/p' addon.xml)
+          if [ "$addon_version" != "$expected" ]; then
+            echo "tag $tag expects addon.xml version $expected," >&2
+            echo "but addon.xml says $addon_version" >&2
+            exit 1
+          fi
+
+      - name: Build the add-on zip
+        run: make all
+
+      - name: Publish the prerelease
+        uses: softprops/action-gh-release@v3
+        with:
+          prerelease: true
+          files: dist/*.zip
+          body: |
+            Test build. It is **not** published to the add-on repository, so
+            no installed Kodi will offer it as an update.
+
+            Install it with **Settings → Add-ons → Install from zip file**.
+            The next repository release supersedes it on its own: this version
+            carries a `~`, which Kodi sorts before the release it precedes.

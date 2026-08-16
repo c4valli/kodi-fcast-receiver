@@ -1,0 +1,87 @@
+# Kodi Media Center language file
+# Addon Name: FCast Receiver
+# Addon id: service.fcast.receiver
+# Addon Provider: ozankiratli
+#
+# en_gb is not a choice: LANGUAGE_DEFAULT in Kodi is the literal string
+# "resource.language.en_gb", and it is loaded behind whatever language the
+# user has set, for every add-on. It is also the only language whose strings
+# Kodi takes from msgid rather than msgstr - which is why every msgstr below
+# is empty. A translation goes in a sibling folder (resource.language.de_de
+# and so on) with the English left in msgid and the translation in msgstr.
+msgid ""
+msgstr ""
+"Project-Id-Version: Kodi Addons\n"
+"Report-Msgid-Bugs-To: https://github.com/ozankiratli/kodi-fcast-receiver\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: ozankiratli\n"
+"Language-Team: English (United Kingdom)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Ids 32000-32999 are the range reserved for scripts and services. Settings
+# labels must be given as these numbers; the dialog cannot show literal text.
+
+msgctxt "#32000"
+msgid "General"
+msgstr ""
+
+msgctxt "#32001"
+msgid "Notifications"
+msgstr ""
+
+msgctxt "#32002"
+msgid "Show on-screen notifications"
+msgstr ""
+
+msgctxt "#32003"
+msgid "Show a message when a sender connects, disconnects or starts something playing. Errors are always shown."
+msgstr ""
+
+msgctxt "#32010"
+msgid "Pictures"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Display"
+msgstr ""
+
+msgctxt "#32012"
+msgid "Picture duration (seconds)"
+msgstr ""
+
+msgctxt "#32013"
+msgid "How long a picture in a cast playlist stays on screen before the next item starts. Set to 0 to leave it up until the sender moves on. A picture cast on its own is never closed automatically."
+msgstr ""
+
+msgctxt "#32014"
+msgid "Ignore the duration the sender asks for"
+msgstr ""
+
+msgctxt "#32015"
+msgid "Use the duration above for every picture in a playlist, including those the sender gave a duration of its own."
+msgstr ""
+
+msgctxt "#32016"
+msgid "Download pictures before showing them"
+msgstr ""
+
+msgctxt "#32017"
+msgid "Keeps the picture already on screen up while the next one downloads, instead of going black for the wait. Recently shown pictures are kept, so casting one again costs nothing. Turn this off if pictures fail to appear."
+msgstr ""
+
+msgctxt "#32018"
+msgid "Playlists"
+msgstr ""
+
+msgctxt "#32019"
+msgid "Keep the screen awake while a picture is showing"
+msgstr ""
+
+msgctxt "#32020"
+msgid "Kodi treats a single picture as an idle screen rather than as something playing, so the screensaver starts up behind it and, on some skins, is audible when it cannot come to the front. Turn this off to let the screen go to sleep over a cast picture."
+msgstr ""

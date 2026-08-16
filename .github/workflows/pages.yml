@@ -1,0 +1,83 @@
+name: Publish the website
+
+# The landing page and the add-on repository are one GitHub Pages site, and a
+# deployment replaces the whole of it, so every deployment has to carry both.
+# Publishing the page on its own would take addons.xml and the zips down with
+# it, and every installed device would stop seeing updates.
+#
+# This workflow is for changes to the page alone. It rebuilds the repository
+# from the newest v* tag rather than from main, so editing the site can never
+# publish an unreleased version of the add-on to devices - that is what
+# release.yml does, deliberately, from the tag it was triggered by.
+#
+# The rebuild is not a new release: addons.xml is derived from the tagged
+# addon.xml, so its md5 does not change, and Kodi - which refetches the index
+# only when the md5 does - sees nothing to update.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Shared with release.yml: a release and a site edit landing together must not
+# race to deploy, and neither may be cancelled halfway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history: the tags are what the repository is rebuilt from.
+          fetch-depth: 0
+
+      - uses: actions/configure-pages@v6
+        id: pages
+
+      - name: Rebuild the add-on repository from the newest release
+        run: |
+          # versionsort.suffix '-' so a pre-release tag sorts below the release
+          # it precedes: without it v1.0.0-beta1 outranks v1.0.0 and the site
+          # would go on serving the beta. Same reasoning as the '~' in
+          # addon.xml versions, described in release.yml.
+          git config versionsort.suffix '-'
+          tag=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          if [ -z "$tag" ]; then
+            echo "no v* tag found, so there is no released add-on to publish" >&2
+            echo "alongside the site. Tag a release first - see release.yml." >&2
+            exit 1
+          fi
+          echo "building the add-on repository from $tag"
+
+          # Built from a worktree of the tag, so the zip, addons.xml and the
+          # build script itself are the ones that release published.
+          git worktree add --detach .release "$tag"
+          make -C .release repo REPO_URL=${{ steps.pages.outputs.base_url }}
+          mv .release/repo repo
+
+      - name: Add the website
+        run: make site
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: repo
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v5
+        id: deployment

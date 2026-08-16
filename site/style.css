@@ -1,0 +1,354 @@
+/* Landing page for the FCast receiver.
+   Self-contained: no web fonts, no scripts, nothing fetched from a third party,
+   so the page works the same served from GitHub Pages or off a LAN web server. */
+
+:root {
+  --bg: #ffffff;
+  --bg-soft: #f4f5f7;
+  --bg-sunken: #eceef1;
+  --fg: #16181d;
+  --fg-muted: #5b616e;
+  --line: #dcdfe4;
+  --accent: #0b6bcb;
+  --accent-fg: #ffffff;
+  --accent-soft: #e8f1fc;
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12141a;
+    --bg-soft: #191c23;
+    --bg-sunken: #22262f;
+    --fg: #e7e9ee;
+    --fg-muted: #9aa2b1;
+    --line: #2c313b;
+    --accent: #61a6f2;
+    --accent-fg: #0d1017;
+    --accent-soft: #1a2634;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1, h2, h3 { line-height: 1.25; }
+
+a { color: var(--accent); }
+a:hover { text-decoration: none; }
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--bg-sunken);
+  border-radius: 5px;
+  padding: 0.12em 0.38em;
+}
+
+pre {
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; }
+
+/* ---- hero ---------------------------------------------------------------- */
+
+.hero {
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--line);
+  padding: 3.5rem 1.5rem 3rem;
+  text-align: center;
+}
+
+.hero .logo {
+  border-radius: 16px;
+  display: block;
+  margin: 0 auto 1.25rem;
+}
+
+.hero h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.9rem, 5vw, 2.7rem);
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  margin: 0 auto;
+  max-width: 34rem;
+  color: var(--fg-muted);
+  font-size: 1.1rem;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 1.5rem 0 0;
+}
+.badges span {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--fg-muted);
+  font-size: 0.82rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin: 1.75rem 0 0;
+}
+
+.button {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--fg);
+  display: inline-block;
+  font-weight: 600;
+  padding: 0.6rem 1.3rem;
+  text-decoration: none;
+}
+.button:hover { border-color: var(--accent); }
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.button.primary:hover { opacity: 0.9; }
+.button.download { margin: 0.4rem 0; }
+
+/* Points at the current test build, which carries the work that has not
+   reached the add-on repository yet. */
+.banner {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  margin: 2rem auto 0;
+  max-width: 36rem;
+  padding: 0.85rem 1.2rem;
+  text-align: left;
+}
+
+/* ---- section nav --------------------------------------------------------- */
+
+.toc {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  justify-content: center;
+  padding: 0.9rem 1.5rem;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+.toc a {
+  color: var(--fg-muted);
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+.toc a:hover { color: var(--accent); }
+
+/* ---- layout -------------------------------------------------------------- */
+
+main {
+  margin: 0 auto;
+  max-width: 46rem;
+  padding: 0 1.5rem 3rem;
+}
+
+section { padding-top: 3rem; }
+
+section > h2 {
+  border-bottom: 1px solid var(--line);
+  font-size: 1.6rem;
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.5rem;
+}
+
+h3 { font-size: 1.12rem; margin: 2rem 0 0.6rem; }
+
+.pill {
+  background: var(--accent-soft);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.6rem;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.hint {
+  color: var(--fg-muted);
+  display: inline-block;
+  font-size: 0.9rem;
+}
+
+/* ---- feature grid -------------------------------------------------------- */
+
+.features {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  list-style: none;
+  margin: 1.75rem 0;
+  padding: 0;
+}
+.features li {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+.features h3 { font-size: 1rem; margin: 0 0 0.35rem; }
+.features p { color: var(--fg-muted); font-size: 0.94rem; margin: 0; }
+
+/* ---- what's in the test build -------------------------------------------- */
+
+.whatsnew {
+  list-style: none;
+  margin: 1.25rem 0;
+  padding: 0;
+}
+.whatsnew li {
+  border-left: 2px solid var(--accent);
+  margin-bottom: 0.9rem;
+  padding-left: 1rem;
+}
+.whatsnew b { color: var(--fg); }
+
+.cta-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+/* ---- callouts ------------------------------------------------------------ */
+
+.note, .requirements {
+  background: var(--bg-soft);
+  border-left: 3px solid var(--line);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 0.85rem 1.1rem;
+}
+
+.callout {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 0.4rem 1.25rem;
+}
+.callout p:first-child { margin-top: 1rem; }
+
+/* ---- numbered install steps ---------------------------------------------- */
+
+.steps {
+  counter-reset: step;
+  list-style: none;
+  margin: 1.25rem 0;
+  padding: 0;
+}
+.steps > li {
+  border-left: 1px solid var(--line);
+  margin-left: 0.9rem;
+  padding: 0 0 1.4rem 1.75rem;
+  position: relative;
+}
+.steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.steps > li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: -0.9rem;
+  top: -0.15rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+/* ---- settings list ------------------------------------------------------- */
+
+.path {
+  background: var(--bg-sunken);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  padding: 0.6rem 0.9rem;
+}
+
+.settings { margin: 1.5rem 0 0; }
+.settings dt {
+  font-weight: 650;
+  margin-top: 1.5rem;
+}
+.settings dd {
+  border-left: 2px solid var(--line);
+  color: var(--fg-muted);
+  margin: 0.4rem 0 0;
+  padding-left: 1rem;
+}
+.settings dd .hint { margin-top: 0.5rem; }
+
+/* ---- troubleshooting ----------------------------------------------------- */
+
+details {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-bottom: 0.75rem;
+  padding: 0 1.1rem;
+}
+details[open] { background: var(--bg-soft); padding-bottom: 0.4rem; }
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.85rem 0;
+}
+summary:hover { color: var(--accent); }
+details p:first-of-type { margin-top: 0; }
+
+/* ---- footer -------------------------------------------------------------- */
+
+footer {
+  border-top: 1px solid var(--line);
+  color: var(--fg-muted);
+  padding: 2rem 1.5rem 3rem;
+  text-align: center;
+}
+footer p { margin: 0.5rem 0; }
+footer .small {
+  font-size: 0.86rem;
+  margin: 0.75rem auto 0;
+  max-width: 38rem;
+}
+
+@media (max-width: 30rem) {
+  .hero { padding: 2.5rem 1.25rem 2.25rem; }
+  .toc { gap: 0.4rem 1rem; }
+  .button { flex: 1 1 auto; text-align: center; }
+}
